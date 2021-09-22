@@ -3,14 +3,14 @@
 #include <cassert>
 #include <iostream>
 
-#include "PlatformImplement.h"
+#include "Core.h"
 
 const char* ToString(ELogLevel::Type LogLevel)
 {
 	LogLevel = ELogLevel::Type(static_cast<uint32_t>(LogLevel) & static_cast<uint32_t>(ELogLevel::kLevelBitMask));
 	unsigned long Index = 0;
 	assert(LogLevel != 0);
-	FPlatformImplement::BitScanReverse(&Index, LogLevel);
+	FPlatformImplement::BitScanReverseImpl(&Index, LogLevel);
 	switch (1 << Index)
 	{
 	case ELogLevel::kDebug:
@@ -102,7 +102,7 @@ void CLogger::Loop() {
 	{
 		std::string FormatLog =
 			std::format("[{:s}] [{:#010x}] [{:<7s}] {:s}\n",
-				FPlatformImplement::GetCurrentSystemTime(LogMessage.Timestamp),
+				GetCurrentSystemTime(LogMessage.Timestamp),
 				*reinterpret_cast<_Thrd_id_t*>(&LogMessage.ThreadId),
 				ToString(LogMessage.LogLevel),
 				LogMessage.Message);
