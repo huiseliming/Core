@@ -34,7 +34,14 @@ target_include_directories(Core PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>
     $<INSTALL_INTERFACE:Include>    #${CMAKE_INSTALL_PREFIX}/include
     )
-    
+
+# For windows export symbols
+include(GenerateExportHeader)
+generate_export_header(Core EXPORT_FILE_NAME ${CMAKE_CURRENT_BINARY_DIR}/Include/CoreExport.h)
+target_include_directories(Core PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/Include> #for export header
+    )
+
 if("${PROJECT_NAME}" STREQUAL "Core")
     add_subdirectory(Tests)
 endif()

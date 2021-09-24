@@ -61,7 +61,7 @@ public:
 
 	~CLogger();
 
-	void Log(ELogLevel::Type LogLevel, const std::string_view Message);
+	void Log(ELogLevel::Type LogLevel, const std::string& Message);
 
 	void Log(ELogLevel::Type LogLevel, std::string&& Message);
 
@@ -71,11 +71,12 @@ public:
 		Log(LogLevel, std::format(Message, std::forward<TArgs>(Args)...));
 	}
 
-	template<typename ... TArgs>
-	void Log(ELogLevel::Type LogLevel, std::string&& Message, TArgs&& ... Args)
-	{
-		Log(LogLevel, std::format(std::forward<std::string>(Message), std::forward<TArgs>(Args)...));
-	}
+	//void Log(ELogLevel::Type LogLevel, const std::string_view Message);
+	//template<typename ... TArgs>
+	//void Log(ELogLevel::Type LogLevel, std::string&& Message, TArgs&& ... Args)
+	//{
+	//	Log(LogLevel, std::format(std::forward<std::string>(Message), std::forward<TArgs>(Args)...));
+	//}
 
 protected:
 	void Run();

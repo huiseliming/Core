@@ -38,11 +38,11 @@ CLogger::CLogger()
 
 CLogger::~CLogger()
 {
-	//Running = false;
+	Running = false;
 	LogThread.join();
 }
 
-void CLogger::Log(ELogLevel::Type LogLevel, const std::string_view Message)
+void CLogger::Log(ELogLevel::Type LogLevel, const std::string& Message)
 {
 	//assert(Running == true);
 	LogMessageQueue.Enqueue(FLogMessage{

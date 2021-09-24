@@ -1,5 +1,8 @@
 #pragma once
 #include <memory>
+#include "Logger.h"
+#include "CoreExport.h"
 
-extern std::unique_ptr<class CLogger> GLogger;
+#define CORE_API CORE_EXPORT
 
+extern CORE_API std::unique_ptr<CLogger> GLogger;
