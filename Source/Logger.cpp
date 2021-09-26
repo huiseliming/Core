@@ -2,8 +2,9 @@
 
 #include <cassert>
 #include <iostream>
-
 #include "Core.h"
+
+std::unique_ptr<CLogger> GLogger;
 
 const char* ToString(ELogLevel::Type LogLevel)
 {
@@ -60,7 +61,7 @@ void CLogger::Log(ELogLevel::Type LogLevel, std::string&& Message)
 		.Timestamp = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()),
 		.ThreadId = std::this_thread::get_id(),
 		.LogLevel = LogLevel,
-		.Message = std::forward<std::string>(Message)
+		.Message = std::move(Message)
 		});
 }
 

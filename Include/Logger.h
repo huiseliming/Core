@@ -89,8 +89,8 @@ protected:
 	std::ofstream LogFile;
 	std::vector<std::function<void(const FLogMessage&)>> LogActions;
 
-	TQueue<std::function<void()>> TaskQueue;
-	TQueue<FLogMessage> LogMessageQueue;
+	TQueue<std::function<void()>, EQueueMode::MPSC> TaskQueue;
+	TQueue<FLogMessage, EQueueMode::MPSC> LogMessageQueue;
 
 };
 

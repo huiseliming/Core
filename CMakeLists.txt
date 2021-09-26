@@ -1,6 +1,3 @@
-
-cmake_minimum_required(VERSION 3.17)
-
 if(NOT PROJECT_NAME)
     # export EvnVar VCPKG_ROOT 
     # set vcpkg triplet and toolchain_file, Must before project()
@@ -18,10 +15,11 @@ if(NOT PROJECT_NAME)
     endif()
 
     project(Core LANGUAGES CXX C)
-    set(CMAKE_CXX_STANDARD 20)
-    set(CMAKE_CXX_STANDARD_REQUIRED ON)
-    set(CMAKE_CXX_EXTENSIONS OFF)
 endif()
+
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(asio CONFIG REQUIRED)
 
@@ -62,6 +60,6 @@ target_include_directories(Core PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/Include> #for export header
     )
 
-if("${PROJECT_NAME}" STREQUAL "Core")
+# if("${PROJECT_NAME}" STREQUAL "Core")
     add_subdirectory(Tests)
-endif()
+# endif()
