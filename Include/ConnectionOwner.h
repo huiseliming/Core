@@ -13,6 +13,7 @@ namespace asio {
 
 class CConnectionOwner
 {
+	friend class CConnection;
 public:
 	struct FImpl;
 
@@ -21,31 +22,28 @@ public:
 	CConnectionOwner(CConnectionOwner&& Other) = delete;
 	CConnectionOwner& operator=(const CConnectionOwner&) = delete;
 	CConnectionOwner& operator=(CConnectionOwner&& Other) = delete;
-
 	virtual ~CConnectionOwner();
 
-	virtual asio::io_context& GetIoContext();
-	virtual TQueue<FMessage, EQueueMode::MPSC>& GetRecvQueue();
-	virtual void IncreaseConnectionCounter();
-	virtual void DecreaseConnectionCounter();
-
-	virtual void OnMessage(std::shared_ptr<CConnection> ConnectionPtr, FMessageData& MessageData) = 0;
-	virtual void OnConnectionConnected(std::shared_ptr<CConnection> ConnectionPtr) = 0;
-	virtual void OnConnectionDisconnected(std::shared_ptr<CConnection> ConnectionPtr) = 0;
-
+	asio::io_context& GetIoContext();
+	TQueue<FMessage, EQueueMode::MPSC>& GetRecvQueue();
+	void IncreaseConnectionCounter();
+	void DecreaseConnectionCounter();
 	void PushTask(std::function<void()>&& Task);;
-
 	void ProcessTask();
+	uint32_t ProcessMessage();
+	uint32_t ProcessEvent();
 
-	void ProcessMessage();
-
-	void ProcessEvent();
-
-	bool RunInIoContext();
-
-	bool RunInUIThread();
+	std::unordered_map<std::string, std::shared_ptr<CConnection>>& GetConnectionMap();
 
 protected:
+	virtual void OnMessage(std::shared_ptr<CConnection> ConnectionPtr, FMessageData& MessageData);
+	virtual void OnConnectionConnected(std::shared_ptr<CConnection> ConnectionPtr);
+	virtual void OnConnectionDisconnected(std::shared_ptr<CConnection> ConnectionPtr);
+
+protected:
+	bool RunInOwnerThread();
+	bool RunInIoContext();
+
 	std::unique_ptr<FImpl> Impl;
 
 };
@@ -53,52 +51,49 @@ protected:
 
 class CClient : public CConnectionOwner
 {
+	using Super = CConnectionOwner;
 public:
-	CClient(uint32_t ThreadNumber)
-		: CConnectionOwner(ThreadNumber)
-	{
-	}
+	CClient(uint32_t ThreadNumber);
 
-
-	void OnMessage(std::shared_ptr<CConnection> ConnectionPtr, FMessageData& MessageData);;
-	void OnConnectionConnected(std::shared_ptr<CConnection> ConnectionPtr) {};
-	void OnConnectionDisconnected(std::shared_ptr<CConnection> ConnectionPtr) {};
 	std::future<std::shared_ptr<CConnection>> ConnectToServer(std::string Address, uint16_t Port);
+	//void OnConnectionConnected(std::shared_ptr<CConnection> ConnectionPtr)
+	//{
+	//	Super::OnConnectionConnected(ConnectionPtr);
+	//	//do something
+	//};
+	//void OnConnectionDisconnected(std::shared_ptr<CConnection> ConnectionPtr)
+	//{
+	//	//do something
+	//	Super::OnConnectionDisconnected(ConnectionPtr);
+	//};
+protected:
 };
 
 class CServer : public CConnectionOwner
 {
+	using Super = CConnectionOwner;
 public:
-	//using Super = CConnectionOwner;
-	//struct FImpl : public Super::FImpl
-	//{
-	//	using Super = Super::FImpl;
-	//	FImpl()
-	//		: Super()
-	//	{
-
-	//	}
-	//};
-
-	CServer(uint32_t ThreadNumber = 0)
-		: CConnectionOwner(ThreadNumber)
-	{
-	}
+	CServer(uint32_t ThreadNumber = 0);
+	virtual ~CServer();
 
 	void Run(uint16_t Port);
-
 	void WaitForClientConnection();
-
 	void Stop();
+protected:
+	//void OnConnectionConnected(std::shared_ptr<CConnection> ConnectionPtr) 
+	//{
+	//	Super::OnConnectionConnected(ConnectionPtr);
+	//	//do something
+	//};
+	//void OnConnectionDisconnected(std::shared_ptr<CConnection> ConnectionPtr) 
+	//{
+	//	//do something
+	//	Super::OnConnectionDisconnected(ConnectionPtr);
+	//};
 
-	virtual void OnMessage(std::shared_ptr<CConnection> ConnectionPtr, FMessageData& MessageData) override;;
-	virtual void OnConnectionConnected(std::shared_ptr<CConnection> ConnectionPtr) override;
 
-	virtual void OnConnectionDisconnected(std::shared_ptr<CConnection> ConnectionPtr) override;
-
-	uint32_t ConnectedConnection{ 0 };
-
-	std::vector<std::shared_ptr<CConnection>> WaitCleanConnections;
-	std::unordered_map<std::string, std::shared_ptr<CConnection>> Connections;
-
+	bool CheckRunCallOnce();
+#ifndef NDEBUG
+	bool RunCallOnceFlag{ false };
+#endif // !NDEBUG
 };

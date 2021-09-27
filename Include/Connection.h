@@ -24,42 +24,32 @@ class CConnection : public std::enable_shared_from_this<CConnection>
 public:
 	struct FImpl;
 	CConnection(CConnectionOwner& Owner);
-
-	virtual ~CConnection();
-
 	CConnection(const CConnection&) = delete;
 	CConnection(CConnection&&) = delete;
 	CConnection& operator=(const CConnection&) = delete;
 	CConnection& operator=(CConnection&&) = delete;
-
-	void ConnectToRemote();
-
-	void ConnectFailed();
+	virtual ~CConnection();
 
 	const char* GetNetworkName();
-
 	ESocketState GetSocketState();
-
 	void Disconnect();
-
 	uint64_t Send(const FMessageData& MessageData);
-
 	uint64_t Send(FMessageData&& MessageData);
 
 protected:
-
-	virtual void OnErrorCode(std::error_code& ErrorCode);
-
+	virtual void OnErrorCode(const std::error_code& ErrorCode);
 	virtual void ReadHeader();
-
 	virtual void ReadBody();
-
 	virtual void WriteHeader();
-
 	virtual void WriteBody();
 
 
 private:
+	void ConnectToServer();
+	void ConnectToClient();
+	void ConnectToRemote();
+	void ConnectFailed();
+	bool SetConnectingSocketState();
 	void* GetSocket();
 
 protected:

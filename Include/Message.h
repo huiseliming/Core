@@ -14,9 +14,8 @@ struct FMessageData
 	private:
 		FHeader()
 		{
-			assert(!"DONT NEW struct FMessageData::FHeaderStructure");
+			assert(!"DONT NEW STRUCT FMessageData::FHeader");
 		}
-
 	public:
 		uint32_t BodySize{ 0 };
 		uint32_t DataDesc{ 0 };

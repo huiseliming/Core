@@ -75,21 +75,11 @@ void CLogger::Run()
 #else
 	tm* NowTmPtr = localtime(&Now);
 #endif // DEBUG
-	std::string SystemTime =
-		std::format("{:d}{:02d}{:02d}_{:02d}{:02d}{:02d}",
-			NowTmPtr->tm_year + 1900, NowTmPtr->tm_mon, NowTmPtr->tm_mday,
-			NowTmPtr->tm_hour, NowTmPtr->tm_min, NowTmPtr->tm_sec);
-	LogFile.open(std::format("{:s}.log", SystemTime), std::ios::app);
-	if (!LogFile.is_open()) {
-		std::cout << std::format("[{:s}.log] FILE CANT OPEN!", SystemTime) << std::endl;
-		return;
-	}
 	Running = true;
 	while (Running) {
 		Loop();
 	}
 	Loop();
-	LogFile.close();
 }
 
 void CLogger::Loop() {
@@ -101,13 +91,19 @@ void CLogger::Loop() {
 	}
 	while (LogMessageQueue.Dequeue(LogMessage))
 	{
+		if (*LogMessage.Message.rbegin() == '\n') // remove last \n or \r\n
+		{
+			if (*(LogMessage.Message.rbegin()++) == '\r')
+				LogMessage.Message.resize(LogMessage.Message.size() - 2);
+			else
+				LogMessage.Message.resize(LogMessage.Message.size() - 1);
+		}
 		std::string FormatLog =
 			std::format("[{:s}] [{:#010x}] [{:<7s}] {:s}\n",
 				GetCurrentSystemTime(LogMessage.Timestamp),
 				*reinterpret_cast<_Thrd_id_t*>(&LogMessage.ThreadId),
 				ToString(LogMessage.LogLevel),
 				LogMessage.Message);
-		LogFile.write(FormatLog.data(), FormatLog.size());
 		std::cout << FormatLog;
 		for (size_t i = 0; i < LogActions.size(); i++)
 		{

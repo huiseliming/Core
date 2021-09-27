@@ -41,27 +41,18 @@ CConnection::~CConnection()
 	std::promise<void> Promise;
 	std::future<void> Future = Promise.get_future();
 	asio::dispatch(Impl->IoContext, [&]() mutable {
-		if (Impl->State != ESocketState::kInit && Impl->State != ESocketState::kConnectFailed && Impl->Socket.is_open())
+		if (Impl->Socket.is_open())
 		{
-			Impl->Socket.shutdown(asio::ip::tcp::socket::shutdown_both);
+			std::error_code ErrorCode;
+			Impl->Socket.shutdown(asio::ip::tcp::socket::shutdown_both, ErrorCode);
+			if (ErrorCode) OnErrorCode(ErrorCode);
 			Impl->Socket.close();
-			Impl->State = ESocketState::kDisconnected;
 		}
 		Promise.set_value();
 		});
 	Future.get();
 	Impl->Owner.DecreaseConnectionCounter();
 }
-
-void CConnection::ConnectToRemote()
-{
-	Impl->NetworkName = std::format("{:s}:{:d}", Impl->Socket.remote_endpoint().address().to_string(), Impl->Socket.remote_endpoint().port());
-	Impl->State = ESocketState::kConnected;
-	Impl->Owner.PushTask([Self = shared_from_this()]{ Self->Impl->Owner.OnConnectionConnected(Self); });
-	ReadHeader();
-}
-
-void CConnection::ConnectFailed() { Impl->State = ESocketState::kConnectFailed; }
 
 const char* CConnection::GetNetworkName() { return Impl->NetworkName.c_str(); }
 
@@ -73,12 +64,10 @@ void CConnection::Disconnect()
 	asio::dispatch(Impl->IoContext, [this, Self]() mutable {
 		if (Impl->Socket.is_open())
 		{
-			if (Impl->State != ESocketState::kConnectFailed && Impl->State != ESocketState::kInit)
-			{
-				Impl->Socket.shutdown(asio::ip::tcp::socket::shutdown_both);
-				Impl->Socket.close();
-				Impl->State = ESocketState::kDisconnected;
-			}
+			std::error_code ErrorCode;
+			Impl->Socket.shutdown(asio::ip::tcp::socket::shutdown_both, ErrorCode);
+			if (ErrorCode) OnErrorCode(ErrorCode);
+			Impl->Socket.close();
 		}
 		});
 }
@@ -89,23 +78,8 @@ uint64_t CConnection::Send(const FMessageData& MessageData)
 	const_cast<FMessageData&>(MessageData).SetSequenceNumber(SequenceNumber);
 	Impl->SendTo.Enqueue(MessageData);
 	bool Expected = false;
-	bool IsNeedWriteHeader = Impl->IsWriting.compare_exchange_strong(Expected, true);
-	if (IsNeedWriteHeader) {
-		auto Self(this->shared_from_this());
-		Impl->IoContextWriteStrand.dispatch(
-			[this, Self] {
-				if (Impl->State == ESocketState::kConnected)
-					WriteHeader();
-				else
-				{
-					bool Expected = true;
-					bool IsNeedWriteHeader = Impl->IsWriting.compare_exchange_strong(Expected, false);
-					if (!IsNeedWriteHeader) {
-						GLogger->Log(ELogLevel::kError, "Call send in ESocketState::kConnected Connection");
-					}
-				}
-			});
-	}
+	if (Impl->IsWriting.compare_exchange_strong(Expected, true))
+		Impl->IoContextWriteStrand.dispatch([this, Self = shared_from_this()]{ WriteHeader(); });
 	return SequenceNumber;
 }
 
@@ -115,43 +89,22 @@ uint64_t CConnection::Send(FMessageData&& MessageData)
 	const_cast<FMessageData&>(MessageData).SetSequenceNumber(SequenceNumber);
 	Impl->SendTo.Enqueue(std::move(MessageData));
 	bool Expected = false;
-	bool IsNeedWriteHeader = Impl->IsWriting.compare_exchange_strong(Expected, true);
-	if (IsNeedWriteHeader) {
-		auto Self(this->shared_from_this());
-		Impl->IoContextWriteStrand.dispatch(
-			[this, Self] {
-				if (Impl->State == ESocketState::kConnected)
-					WriteHeader();
-				else
-				{
-					bool Expected = true;
-					bool IsNeedWriteHeader = Impl->IsWriting.compare_exchange_strong(Expected, false);
-					if (!IsNeedWriteHeader) {
-						GLogger->Log(ELogLevel::kError, "Call send in ESocketState::kConnected Connection");
-					}
-				}
-			});
-	}
+	if (Impl->IsWriting.compare_exchange_strong(Expected, true)) 
+		Impl->IoContextWriteStrand.dispatch([this, Self = shared_from_this()] {WriteHeader();});
 	return SequenceNumber;
 }
 
-void CConnection::OnErrorCode(std::error_code& ErrorCode)
+void CConnection::OnErrorCode(const std::error_code& ErrorCode)
 {
 	assert(Impl->Owner.RunInIoContext());
-	// auto Self(this->shared_from_this());
-	// remote is shutdown if eof 
-	if (asio::error::eof == ErrorCode && Impl->State != ESocketState::kDisconnected)
+	if (asio::error::eof == ErrorCode)
 	{
-		Impl->State = ESocketState::kDisconnected;
+		// remote is shutdown if eof 
 	}
-	else {
-		if (Impl->State != ESocketState::kDisconnected)
-		{
-			Impl->State = ESocketState::kDisconnected;
-			GLogger->Log(ELogLevel::kWarning, "Socket Error: {}\n", ErrorCode.message());
-		}
-	}
-	Impl->Owner.PushTask([Self = shared_from_this()]{ Self->Impl->Owner.OnConnectionDisconnected(Self); });
+	GLogger->Log(ELogLevel::kWarning, "<{:s}> Socket Error : {:s}\n", Impl->NetworkName, ErrorCode.message());
+	ESocketState ExpectedSocketState = ESocketState::kConnected;
+	if (Impl->State.compare_exchange_strong(ExpectedSocketState, ESocketState::kDisconnected))
+		Impl->Owner.PushTask([Self = shared_from_this()]{ Self->Impl->Owner.OnConnectionDisconnected(Self); });
 }
 
 void CConnection::ReadHeader()
@@ -259,7 +212,37 @@ void CConnection::WriteBody()
 			}));
 }
 
-void* CConnection::GetSocket()
+void CConnection::ConnectToServer()
 {
-	return &(Impl->Socket);
+	ESocketState ExpectedSocketState = ESocketState::kConnecting;
+	assert(Impl->State.compare_exchange_strong(ExpectedSocketState, ESocketState::kConnected));
+	ConnectToRemote();
 }
+
+void CConnection::ConnectToClient()
+{
+	ESocketState ExpectedSocketState = ESocketState::kInit;
+	assert(Impl->State.compare_exchange_strong(ExpectedSocketState, ESocketState::kConnected));
+	ConnectToRemote();
+}
+
+void CConnection::ConnectToRemote()
+{
+	Impl->NetworkName = std::format("{:s}:{:d}", Impl->Socket.remote_endpoint().address().to_string(), Impl->Socket.remote_endpoint().port());
+	Impl->Owner.PushTask([Self = shared_from_this()]{ Self->Impl->Owner.OnConnectionConnected(Self); });
+	ReadHeader();
+}
+
+void CConnection::ConnectFailed()
+{
+	ESocketState ExpectedSocketState = ESocketState::kConnecting;
+	assert(Impl->State.compare_exchange_strong(ExpectedSocketState, ESocketState::kConnectFailed));
+}
+
+bool CConnection::SetConnectingSocketState()
+{
+	ESocketState ExpectedSocketState = ESocketState::kInit;
+	return Impl->State.compare_exchange_strong(ExpectedSocketState, ESocketState::kConnecting);
+}
+
+void* CConnection::GetSocket(){ return &(Impl->Socket); }

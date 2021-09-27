@@ -5,6 +5,7 @@
 #include <functional>
 #include <future>
 #include "Queue.h"
+#include "CoreApi.h"
 
 namespace ELogLevel
 {
@@ -16,7 +17,8 @@ namespace ELogLevel
 		kWarning = 1 << 3,
 		kError = 1 << 4,
 		kFatal = 1 << 5,
-		kLevelBitMask = kTrace | kDebug | kInfo | kWarning | kError | kFatal,
+		kDisplay = 1 << 6,
+		kLevelBitMask = kTrace | kDebug | kInfo | kWarning | kError | kFatal | kDisplay,
 	};
 }
 
@@ -86,7 +88,6 @@ protected:
 	std::atomic<bool> Running;
 	std::thread LogThread;
 
-	std::ofstream LogFile;
 	std::vector<std::function<void(const FLogMessage&)>> LogActions;
 
 	TQueue<std::function<void()>, EQueueMode::MPSC> TaskQueue;
@@ -95,3 +96,7 @@ protected:
 };
 
 const char* ToString(ELogLevel::Type LogLevel);
+
+extern CORE_API std::unique_ptr<CLogger> GLogger;
+
+#define LOG(X, ...) GLogger->Log(ELogLevel::kDisplay, X, ##__VA_ARGS__)

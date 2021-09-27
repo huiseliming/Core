@@ -1,18 +1,18 @@
 
 
 
-add_executable(LoggerTest LoggerTest.cpp)
-target_link_libraries(LoggerTest Core)
+add_executable(TestLogger TestLogger.cpp)
+target_link_libraries(TestLogger Core)
 
 
-add_executable(NetworkTest NetworkTest.cpp)
-target_link_libraries(NetworkTest Core)
+add_executable(TestNetwork TestNetwork.cpp)
+target_link_libraries(TestNetwork Core)
 
-add_executable(NetworkTestClient NetworkTestClient.cpp)
-target_link_libraries(NetworkTestClient Core)
+add_executable(TestNetworkClient TestNetworkClient.cpp)
+target_link_libraries(TestNetworkClient Core)
 
-add_executable(NetworkTestServer NetworkTestServer.cpp)
-target_link_libraries(NetworkTestServer Core)
+add_executable(TestNetworkServer TestNetworkServer.cpp)
+target_link_libraries(TestNetworkServer Core)
 
 
 
