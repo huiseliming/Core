@@ -6,13 +6,13 @@
 
 std::unique_ptr<CLogger> GLogger;
 
-const char* ToString(ELogLevel::Type LogLevel)
+const char* ToString(ELogLevel LogLevel)
 {
-	LogLevel = ELogLevel::Type(static_cast<uint32_t>(LogLevel) & static_cast<uint32_t>(ELogLevel::kLevelBitMask));
+	LogLevel = ELogLevel(static_cast<uint32_t>(LogLevel) & static_cast<uint32_t>(ELogLevel::kLevelBitMask));
 	unsigned long Index = 0;
-	assert(LogLevel != 0);
-	FPlatformImplement::BitScanReverseImpl(&Index, LogLevel);
-	switch (1 << Index)
+	assert(uint32_t(LogLevel) != 0);
+	FPlatformImplement::BitScanReverseImpl(&Index, uint32_t(LogLevel));
+	switch (ELogLevel(1 << Index))
 	{
 	case ELogLevel::kDebug:
 		return "Debug";
@@ -43,25 +43,25 @@ CLogger::~CLogger()
 	LogThread.join();
 }
 
-void CLogger::Log(ELogLevel::Type LogLevel, const std::string& Message)
+void CLogger::Log(ELogLevel LogLevel, const std::string& Message)
 {
 	//assert(Running == true);
 	LogMessageQueue.Enqueue(FLogMessage{
-		.Timestamp = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()),
-		.ThreadId = std::this_thread::get_id(),
-		.LogLevel = LogLevel,
-		.Message = Message.data()
+		std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()),
+		std::this_thread::get_id(),
+		LogLevel,
+		Message.data()
 		});
 }
 
-void CLogger::Log(ELogLevel::Type LogLevel, std::string&& Message)
+void CLogger::Log(ELogLevel LogLevel, std::string&& Message)
 {
 	//assert(Running == true);
 	LogMessageQueue.Enqueue(FLogMessage{
-		.Timestamp = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()),
-		.ThreadId = std::this_thread::get_id(),
-		.LogLevel = LogLevel,
-		.Message = std::move(Message)
+		std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()),
+		std::this_thread::get_id(),
+		LogLevel,
+		std::move(Message)
 		});
 }
 
@@ -100,7 +100,7 @@ void CLogger::Loop() {
 		}
 		std::string FormatLog =
 			std::format("[{:s}] [{:#010x}] [{:<7s}] {:s}\n",
-				GetCurrentSystemTime(LogMessage.Timestamp),
+				FormatSystemTime(LogMessage.Timestamp),
 				*reinterpret_cast<_Thrd_id_t*>(&LogMessage.ThreadId),
 				ToString(LogMessage.LogLevel),
 				LogMessage.Message);

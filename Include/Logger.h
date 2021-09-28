@@ -4,12 +4,13 @@
 #include <fstream>
 #include <functional>
 #include <future>
+#include <cassert>
 #include "Queue.h"
 #include "CoreApi.h"
 
-namespace ELogLevel
-{
-	enum Type : uint32_t
+//namespace ELogLevel
+//{
+	enum class ELogLevel : uint32_t
 	{
 		kTrace = 1 << 0,
 		kDebug = 1 << 1,
@@ -20,13 +21,54 @@ namespace ELogLevel
 		kDisplay = 1 << 6,
 		kLevelBitMask = kTrace | kDebug | kInfo | kWarning | kError | kFatal | kDisplay,
 	};
-}
 
 struct FLogMessage
 {
+	FLogMessage() = default;
+	FLogMessage(time_t Timestamp, std::thread::id ThreadId, ELogLevel LogLevel, const std::string& Message)
+		: Timestamp(Timestamp)
+		, ThreadId(ThreadId)
+		, LogLevel(LogLevel)
+		, Message(Message)
+	{
+	}
+	FLogMessage(time_t Timestamp, std::thread::id ThreadId, ELogLevel LogLevel, std::string&& Message)
+		: Timestamp(Timestamp)
+		, ThreadId(ThreadId)
+		, LogLevel(LogLevel)
+		, Message(std::move(Message))
+	{
+	}
+
+	FLogMessage(const FLogMessage&) = default;
+	FLogMessage(FLogMessage&& Other)
+	{
+		Timestamp = Other.Timestamp;
+		ThreadId = Other.ThreadId;
+		LogLevel = Other.LogLevel;
+		Other.Timestamp = { 0 };
+		Other.ThreadId = std::thread::id();
+		Other.LogLevel = ELogLevel::kTrace;
+		Message = std::move(Other.Message);
+	}
+
+	FLogMessage& operator=(const FLogMessage&) = default;
+	FLogMessage& operator=(FLogMessage&& Other)
+	{
+		assert(std::addressof(Other) != this);
+		Timestamp = Other.Timestamp;
+		ThreadId = Other.ThreadId;
+		LogLevel = Other.LogLevel;
+		Other.Timestamp = { 0 };
+		Other.ThreadId = std::thread::id();
+		Other.LogLevel = ELogLevel::kTrace;
+		Message = std::move(Other.Message);
+		return *this;
+	}
+
 	time_t Timestamp;
 	std::thread::id ThreadId;
-	ELogLevel::Type LogLevel;
+	ELogLevel LogLevel;
 	std::string Message;
 };
 
@@ -63,19 +105,19 @@ public:
 
 	~CLogger();
 
-	void Log(ELogLevel::Type LogLevel, const std::string& Message);
+	void Log(ELogLevel LogLevel, const std::string& Message);
 
-	void Log(ELogLevel::Type LogLevel, std::string&& Message);
+	void Log(ELogLevel LogLevel, std::string&& Message);
 
 	template<typename ... TArgs>
-	void Log(ELogLevel::Type LogLevel, const std::string_view Message, TArgs&& ... Args)
+	void Log(ELogLevel LogLevel, const std::string_view Message, TArgs&& ... Args)
 	{
 		Log(LogLevel, std::format(Message, std::forward<TArgs>(Args)...));
 	}
 
-	//void Log(ELogLevel::Type LogLevel, const std::string_view Message);
+	//void Log(ELogLevel LogLevel, const std::string_view Message);
 	//template<typename ... TArgs>
-	//void Log(ELogLevel::Type LogLevel, std::string&& Message, TArgs&& ... Args)
+	//void Log(ELogLevel LogLevel, std::string&& Message, TArgs&& ... Args)
 	//{
 	//	Log(LogLevel, std::format(std::forward<std::string>(Message), std::forward<TArgs>(Args)...));
 	//}
@@ -95,7 +137,7 @@ protected:
 
 };
 
-const char* ToString(ELogLevel::Type LogLevel);
+const char* ToString(ELogLevel LogLevel);
 
 extern CORE_API std::unique_ptr<CLogger> GLogger;
 

@@ -35,7 +35,7 @@ std::string TranslateHResult(HRESULT Hr)
 	return errorMsg;
 }
 
-std::string GetCurrentSystemTime(const time_t& tt)
+std::string FormatSystemTime(const time_t& tt)
 {
 #ifdef _WIN32
 	tm NowTm = { 0 };
@@ -50,6 +50,6 @@ std::string GetCurrentSystemTime(const time_t& tt)
 }
 std::string GetCurrentSystemTime()
 {
-	return GetCurrentSystemTime(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
+	return FormatSystemTime(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
 }
 

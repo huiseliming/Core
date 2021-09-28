@@ -2,6 +2,7 @@
 #include <asio.hpp>
 #include "ConnectionOwner.h"
 #include "Global.h"
+#include <deque>
 
 struct CConnection::FImpl {
 	FImpl(CConnectionOwner& Owner)
@@ -19,8 +20,12 @@ struct CConnection::FImpl {
 	std::string NetworkName;
 	std::atomic<uint64_t> SequenceNumber{ 1 };
 
+#ifdef SENT_TO_USE_TQUEUE
 	// free lock queue for send
 	TQueue<FMessageData, EQueueMode::MPSC> SendTo;
+#else
+	std::deque<FMessageData> SendTo;
+#endif // SENT_TO_USE_TQUEUE
 	std::atomic<bool> IsWriting{ false };
 	// free lock queue for recv
 	TQueue<FMessage, EQueueMode::MPSC>& RecvFrom;
@@ -76,10 +81,21 @@ uint64_t CConnection::Send(const FMessageData& MessageData)
 {
 	uint64_t SequenceNumber = Impl->SequenceNumber++;
 	const_cast<FMessageData&>(MessageData).SetSequenceNumber(SequenceNumber);
+#ifdef SENT_TO_USE_TQUEUE
 	Impl->SendTo.Enqueue(MessageData);
 	bool Expected = false;
 	if (Impl->IsWriting.compare_exchange_strong(Expected, true))
-		Impl->IoContextWriteStrand.dispatch([this, Self = shared_from_this()]{ WriteHeader(); });
+		Impl->IoContextWriteStrand.post([this, Self = shared_from_this()]{ WriteHeader(); });
+#else
+	Impl->IoContextWriteStrand.post(
+		[this, Self = shared_from_this(), MessageData = MessageData] {
+			Impl->SendTo.emplace_back(std::move(MessageData));
+			if (Impl->SendTo.size() <= 1)
+			{
+				WriteHeader();
+			}
+		});
+#endif // SENT_TO_USE_TQUEUE
 	return SequenceNumber;
 }
 
@@ -87,10 +103,21 @@ uint64_t CConnection::Send(FMessageData&& MessageData)
 {
 	uint64_t SequenceNumber = Impl->SequenceNumber++;
 	const_cast<FMessageData&>(MessageData).SetSequenceNumber(SequenceNumber);
+#ifdef SENT_TO_USE_TQUEUE
 	Impl->SendTo.Enqueue(std::move(MessageData));
 	bool Expected = false;
 	if (Impl->IsWriting.compare_exchange_strong(Expected, true)) 
-		Impl->IoContextWriteStrand.dispatch([this, Self = shared_from_this()] {WriteHeader();});
+		Impl->IoContextWriteStrand.post([this, Self = shared_from_this()] {WriteHeader();});
+#else
+	Impl->IoContextWriteStrand.post(
+		[this, Self = shared_from_this(), MessageData = std::move(MessageData)]{
+			Impl->SendTo.emplace_back(std::move(MessageData));
+			if (Impl->SendTo.size() <= 1)
+			{
+				WriteHeader();
+			}
+		});
+#endif // SENT_TO_USE_TQUEUE
 	return SequenceNumber;
 }
 
@@ -154,17 +181,26 @@ void CConnection::ReadBody()
 void CConnection::WriteHeader()
 {
 	auto Self(this->shared_from_this());
+#ifdef SENT_TO_USE_TQUEUE
 	asio::async_write(Impl->Socket, asio::buffer(Impl->SendTo.Peek()->GetHeader(), Impl->SendTo.Peek()->GetHeaderSize()),
+#else
+	asio::async_write(Impl->Socket, asio::buffer(Impl->SendTo.front().GetHeader(), Impl->SendTo.front().GetHeaderSize()),
+#endif // SENT_TO_USE_TQUEUE
 		Impl->IoContextWriteStrand.wrap([this, Self](std::error_code ErrorCode, std::size_t Length)
 			{
 				if (!ErrorCode)
 				{
+#ifdef SENT_TO_USE_TQUEUE
 					if (Impl->SendTo.Peek()->GetBodySize() > 0)
+#else
+					if (Impl->SendTo.front().GetBodySize() > 0)
+#endif // SENT_TO_USE_TQUEUE
 					{
 						WriteBody();
 					}
 					else
 					{
+#ifdef SENT_TO_USE_TQUEUE
 						Impl->SendTo.Pop();
 						if (Impl->SendTo.Peek() != nullptr)
 						{
@@ -176,6 +212,13 @@ void CConnection::WriteHeader()
 							bool IsNeedWriteHeader = Impl->IsWriting.compare_exchange_strong(Expected, false);
 							assert(IsNeedWriteHeader);
 						}
+#else
+						Impl->SendTo.pop_front();
+						if (!Impl->SendTo.empty())
+						{
+							WriteHeader();
+						}
+#endif // SENT_TO_USE_TQUEUE
 					}
 				}
 				else
@@ -188,11 +231,17 @@ void CConnection::WriteHeader()
 void CConnection::WriteBody()
 {
 	auto Self(this->shared_from_this());
+
+#ifdef SENT_TO_USE_TQUEUE
 	asio::async_write(Impl->Socket, asio::buffer(Impl->SendTo.Peek()->GetBody<void>(), Impl->SendTo.Peek()->GetBodySize()),
+#else
+	asio::async_write(Impl->Socket, asio::buffer(Impl->SendTo.front().GetBody<void>(), Impl->SendTo.front().GetBodySize()),
+#endif // SENT_TO_USE_TQUEUE
 		Impl->IoContextWriteStrand.wrap([this, Self](std::error_code ErrorCode, std::size_t Length)
 			{
 				if (!ErrorCode)
 				{
+#ifdef SENT_TO_USE_TQUEUE
 					Impl->SendTo.Pop();
 					if (Impl->SendTo.Peek() != nullptr)
 					{
@@ -204,6 +253,13 @@ void CConnection::WriteBody()
 						bool IsNeedWriteHeader = Impl->IsWriting.compare_exchange_strong(Expected, false);
 						assert(IsNeedWriteHeader);
 					}
+#else
+					Impl->SendTo.pop_front();
+					if (!Impl->SendTo.empty())
+					{
+						WriteHeader();
+					}
+#endif // SENT_TO_USE_TQUEUE
 				}
 				else
 				{

@@ -5,6 +5,12 @@
 #include <system_error>
 #include "Message.h"
 
+
+// define macro SENT_TO_USE_TQUEUE not better performance because Impl->IoContextWriteStrand is lock 
+// SENT_TO_USE_TQUEUE Minimal probability will not activate the write event because Impl->IsWriting.compare_exchange_strong
+// #define SENT_TO_USE_TQUEUE
+
+
 class CConnectionOwner;
 
 enum class ESocketState : uint32_t {

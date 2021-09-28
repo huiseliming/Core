@@ -157,6 +157,17 @@ public:
 		return true;
 	}
 
+	bool MoreThanOne() {
+		TNode* FirstNode = Tail->NextNode;
+		if (FirstNode)
+		{
+			if (FirstNode->NextNode) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 private:
 
 	struct TNode

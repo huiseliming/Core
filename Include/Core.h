@@ -16,7 +16,7 @@ void CoreUninitialize();
 std::string TranslateHResult(HRESULT Hr);
 #endif //  _WIN32
 
-std::string GetCurrentSystemTime(const time_t& tt);
+std::string FormatSystemTime(const time_t& tt);
 
 std::string GetCurrentSystemTime();
 
