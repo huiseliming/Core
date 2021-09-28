@@ -115,6 +115,35 @@ public:
 		Log(LogLevel, std::format(Message, std::forward<TArgs>(Args)...));
 	}
 
+	std::future<void> AddLogCallback(std::shared_ptr<std::function<void(const FLogMessage&)>> LogCallback)
+	{
+		std::shared_ptr<std::promise<void>> Promise = std::make_shared<std::promise<void>>();
+		std::future<void> Future = Promise->get_future();
+		TaskQueue.Enqueue([&, LogCallback, Promise] {
+			LogCallbacks.push_back(LogCallback);
+			Promise->set_value();
+		});
+		return std::move(Future);
+	}
+
+	std::future<bool> RemoveLogCallback(std::shared_ptr<std::function<void(const FLogMessage&)>> LogCallback)
+	{
+		std::shared_ptr<std::promise<bool>> Promise = std::make_shared<std::promise<bool>>();
+		std::future<bool> Future = Promise->get_future();
+		TaskQueue.Enqueue([&, LogCallback, Promise]()  {
+			for (auto it = LogCallbacks.begin(); it != LogCallbacks.end(); it++)
+			{
+				if (*it == LogCallback) {
+					LogCallbacks.erase(it);
+					Promise->set_value(true);
+					return;
+				}
+			}
+			Promise->set_value(false);
+		});
+		return std::move(Future);
+	}
+
 	//void Log(ELogLevel LogLevel, const std::string_view Message);
 	//template<typename ... TArgs>
 	//void Log(ELogLevel LogLevel, std::string&& Message, TArgs&& ... Args)
@@ -130,7 +159,7 @@ protected:
 	std::atomic<bool> Running;
 	std::thread LogThread;
 
-	std::vector<std::function<void(const FLogMessage&)>> LogActions;
+	std::vector<std::shared_ptr<std::function<void(const FLogMessage&)>>> LogCallbacks;
 
 	TQueue<std::function<void()>, EQueueMode::MPSC> TaskQueue;
 	TQueue<FLogMessage, EQueueMode::MPSC> LogMessageQueue;

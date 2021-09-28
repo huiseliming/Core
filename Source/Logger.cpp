@@ -14,6 +14,8 @@ const char* ToString(ELogLevel LogLevel)
 	FPlatformImplement::BitScanReverseImpl(&Index, uint32_t(LogLevel));
 	switch (ELogLevel(1 << Index))
 	{
+	case ELogLevel::kTrace:
+		return "Trace";
 	case ELogLevel::kDebug:
 		return "Debug";
 	case ELogLevel::kInfo:
@@ -24,6 +26,8 @@ const char* ToString(ELogLevel LogLevel)
 		return "Error";
 	case ELogLevel::kFatal:
 		return "Fatal";
+	case ELogLevel::kDisplay:
+		return "Display";
 	default:
 		return "None";
 	}
@@ -105,9 +109,9 @@ void CLogger::Loop() {
 				ToString(LogMessage.LogLevel),
 				LogMessage.Message);
 		std::cout << FormatLog;
-		for (size_t i = 0; i < LogActions.size(); i++)
+		for (size_t i = 0; i < LogCallbacks.size(); i++)
 		{
-			LogActions[i](LogMessage);
+			(*LogCallbacks[i])(LogMessage);
 		}
 	}
 	std::this_thread::yield();
