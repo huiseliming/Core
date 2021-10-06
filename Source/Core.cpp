@@ -3,7 +3,6 @@
 #include "Logger.h"
 #include <ctime>
 #include <chrono>
-#include <format>
 
 void CoreInitialize()
 {

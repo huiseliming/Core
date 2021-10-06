@@ -27,6 +27,7 @@ struct FGuid
 		Data2 = Other.Data2;
 		Data3 = Other.Data3;
 		Data4 = Other.Data4;
+		return *this;
 	}
 	FGuid operator=(FGuid&& Other) {
 		assert(std::addressof(Other) != this);
@@ -38,6 +39,7 @@ struct FGuid
 		Other.Data2 = 0;
 		Other.Data3 = 0;
 		Other.Data4 = 0;
+		return *this;
 	}
 	bool operator==(const FGuid& Other)
 	{

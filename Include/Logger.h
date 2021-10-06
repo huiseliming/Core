@@ -1,12 +1,12 @@
 #pragma once
 #include <thread>
-#include <format>
 #include <fstream>
 #include <functional>
 #include <future>
 #include <cassert>
 #include "Queue.h"
 #include "CoreApi.h"
+#include "Core.h"
 
 //namespace ELogLevel
 //{
@@ -123,7 +123,7 @@ public:
 			LogCallbacks.push_back(LogCallback);
 			Promise->set_value();
 		});
-		return std::move(Future);
+		return Future;
 	}
 
 	std::future<bool> RemoveLogCallback(std::shared_ptr<std::function<void(const FLogMessage&)>> LogCallback)
@@ -141,7 +141,7 @@ public:
 			}
 			Promise->set_value(false);
 		});
-		return std::move(Future);
+		return Future;
 	}
 
 	//void Log(ELogLevel LogLevel, const std::string_view Message);

@@ -186,13 +186,13 @@ private:
 			, Element(std::move(InElement))
 		{ }
 
-		TNode* alignas(8) NextNode;
+		alignas(8) TNode* NextNode;
 		T Element;
 	};
 
 	alignas(8) TNode* Head;
 
-	alignas(8) TNode* Tail;
+	alignas(8)TNode* Tail;
 
 private:
 
