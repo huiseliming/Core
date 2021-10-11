@@ -1,12 +1,13 @@
 #pragma once
 #include <string>
+#include "CoreApi.h"
 
-namespace FPlatformImplement
+struct CORE_API FPlatformImplement
 {
-	void* InterlockedExchangePtr(void** Dest, void* Exchange);
-	void MemoryBarrier();
+	static void* InterlockedExchangePtr(void** Dest, void* Exchange);
+	static void MemoryBarrier();
 
-	unsigned char BitScanForwardImpl(unsigned long* Index, unsigned long Mask);
-	unsigned char BitScanReverseImpl(unsigned long* Index, unsigned long Mask);
+	static unsigned char BitScanForwardImpl(unsigned long* Index, unsigned long Mask);
+	static unsigned char BitScanReverseImpl(unsigned long* Index, unsigned long Mask);
 
-}
+};

@@ -1,7 +1,7 @@
 #pragma once
 #include <functional>
 #include <future>
-
+#include "CoreApi.h"
 #include "Queue.h"
 #include "Message.h"
 
@@ -11,7 +11,11 @@ namespace asio {
 	class io_context;
 }
 
-class CConnectionOwner
+// disable warning 4251
+#pragma warning(push)
+#pragma warning (disable: 4251)
+
+class CORE_API CConnectionOwner
 {
 	friend class CConnection;
 public:
@@ -49,7 +53,7 @@ protected:
 };
 
 
-class CClient : public CConnectionOwner
+class CORE_API CClient : public CConnectionOwner
 {
 	using Super = CConnectionOwner;
 public:
@@ -69,7 +73,7 @@ public:
 protected:
 };
 
-class CServer : public CConnectionOwner
+class CORE_API CServer : public CConnectionOwner
 {
 	using Super = CConnectionOwner;
 public:
@@ -97,3 +101,5 @@ protected:
 	bool RunCallOnceFlag{ false };
 #endif // !NDEBUG
 };
+
+#pragma warning(pop)

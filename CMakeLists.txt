@@ -36,7 +36,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/bin)
 if(WIN32)
     # set windows export symbols(spawn .lib)
     add_compile_options(/MP)
-    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS_SAVE ${CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS})
+    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS OFF)
 endif()
 
 file(GLOB_RECURSE CoreHeader Include/*.h)
@@ -60,6 +61,13 @@ target_include_directories(Core PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/Include> #for export header
     )
 
+
+target_compile_definitions(Core PUBLIC CORE_MODULE)
+
 # if("${PROJECT_NAME}" STREQUAL "Core")
     add_subdirectory(Tests)
 # endif()
+
+if(WIN32)
+    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ${CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS_SAVE})
+endif()

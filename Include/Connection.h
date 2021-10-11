@@ -4,7 +4,7 @@
 #include <cassert>
 #include <system_error>
 #include "Message.h"
-
+#include "CoreApi.h"
 
 // define macro SENT_TO_USE_TQUEUE not better performance because Impl->IoContextWriteStrand is lock 
 // SENT_TO_USE_TQUEUE Minimal probability will not activate the write event because Impl->IsWriting.compare_exchange_strong
@@ -21,8 +21,11 @@ enum class ESocketState : uint32_t {
 	kConnectFailed,
 };
 
+// disable warning 4251
+#pragma warning(push)
+#pragma warning (disable: 4251)
 
-class CConnection : public std::enable_shared_from_this<CConnection>
+class CORE_API CConnection : public std::enable_shared_from_this<CConnection>
 {
 	friend class CConnectionOwner;
 	friend class CClient;
@@ -61,3 +64,5 @@ private:
 protected:
 	std::unique_ptr<FImpl> Impl;
 };
+
+#pragma warning(pop)

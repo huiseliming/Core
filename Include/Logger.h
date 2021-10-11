@@ -97,8 +97,10 @@ namespace std{
 		}
 	};
 }
-
-class CLogger
+// disable warning 4251
+#pragma warning(push)
+#pragma warning (disable: 4251)
+class CORE_API CLogger
 {
 public:
 	CLogger();
@@ -166,7 +168,10 @@ protected:
 
 };
 
-const char* ToString(ELogLevel LogLevel);
+// disable warning 4251
+#pragma warning(pop)
+
+CORE_API const char* ToString(ELogLevel LogLevel);
 
 extern CORE_API std::unique_ptr<CLogger> GLogger;
 

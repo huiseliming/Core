@@ -11,16 +11,16 @@
 
 
 
-void CoreInitialize();
+CORE_API void CoreInitialize();
 
-void CoreUninitialize();
+CORE_API void CoreUninitialize();
 
 std::string TranslateHResult(HRESULT Hr);
 #endif //  _WIN32
 
-std::string FormatSystemTime(const time_t& tt);
+CORE_API std::string FormatSystemTime(const time_t& tt);
 
-std::string GetCurrentSystemTime();
+CORE_API std::string GetCurrentSystemTime();
 
 
 
