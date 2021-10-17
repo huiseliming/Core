@@ -63,14 +63,14 @@ public:
 
 		if (Mode == EQueueMode::MPSC)
 		{
-			OldHead = (TNode*)FPlatformImplement::InterlockedExchangePtr((void**)&Head, NewNode);
-			FPlatformImplement::InterlockedExchangePtr((void**)&OldHead->NextNode, NewNode);
+			OldHead = (TNode*)FPlatform::InterlockedExchangePointerImpl((void**)&Head, NewNode);
+			FPlatform::InterlockedExchangePointerImpl((void**)&OldHead->NextNode, NewNode);
 		}
 		else
 		{
 			OldHead = Head;
 			Head = NewNode;
-			FPlatformImplement::MemoryBarrier();
+			FPlatform::MemoryBarrierImpl();
 			OldHead->NextNode = NewNode;
 		}
 		return true;
@@ -89,14 +89,14 @@ public:
 
 		if (Mode == EQueueMode::MPSC)
 		{
-			OldHead = (TNode*)FPlatformImplement::InterlockedExchangePtr((void**)&Head, NewNode);
-			FPlatformImplement::InterlockedExchangePtr((void**)&OldHead->NextNode, NewNode);
+			OldHead = (TNode*)FPlatform::InterlockedExchangePointerImpl((void**)&Head, NewNode);
+			FPlatform::InterlockedExchangePointerImpl((void**)&OldHead->NextNode, NewNode);
 		}
 		else
 		{
 			OldHead = Head;
 			Head = NewNode;
-			FPlatformImplement::MemoryBarrier();
+			FPlatform::MemoryBarrierImpl();
 			OldHead->NextNode = NewNode;
 		}
 

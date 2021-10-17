@@ -21,6 +21,8 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 find_package(asio CONFIG REQUIRED)
 
 #set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY        ${CMAKE_BINARY_DIR}/lib)
@@ -42,10 +44,12 @@ endif()
 
 file(GLOB_RECURSE CoreHeader Include/*.h)
 file(GLOB_RECURSE CoreSource Source/*.cpp)
+file(GLOB_RECURSE CoreReflect Reflect/*.cpp)
 
 add_library(Core SHARED
     ${CoreHeader}
-    ${CoreSource})
+    ${CoreSource}
+    ${CoreReflect})
 
 target_link_libraries(Core PRIVATE asio::asio)
 
@@ -71,3 +75,18 @@ target_compile_definitions(Core PUBLIC CORE_MODULE)
 if(WIN32)
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ${CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS_SAVE})
 endif()
+
+
+
+target_include_directories(Core PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/Reflect)
+
+foreach(SourceFile ${CoreSource})
+    set(SourceFileInput "${SourceFileInput} ${SourceFile}")
+endforeach()
+
+set(CoreExecutor Reflector.exe)
+set(ReflectorExecuteCommand "${CoreExecutor} -p ${PROJECT_BINARY_DIR} ${SourceFileInput}")
+
+file(GENERATE OUTPUT "${PROJECT_SOURCE_DIR}/Scripts/reflector.bat"
+    CONTENT "cd ${PROJECT_SOURCE_DIR}/Reflect && ${ReflectorExecuteCommand}")

@@ -4,14 +4,14 @@
 #include <iostream>
 #include "Core.h"
 
-std::unique_ptr<CLogger> GLogger;
+CLogger* GLogger = GLogInitializer();
 
 const char* ToString(ELogLevel LogLevel)
 {
 	LogLevel = ELogLevel(static_cast<uint32_t>(LogLevel) & static_cast<uint32_t>(ELogLevel::kLevelBitMask));
 	unsigned long Index = 0;
 	assert(uint32_t(LogLevel) != 0);
-	FPlatformImplement::BitScanReverseImpl(&Index, uint32_t(LogLevel));
+	FPlatform::BitScanReverseImpl(&Index, uint32_t(LogLevel));
 	switch (ELogLevel(1 << Index))
 	{
 	case ELogLevel::kTrace:
@@ -115,4 +115,11 @@ void CLogger::Loop() {
 		}
 	}
 	std::this_thread::yield();
+}
+
+
+CLogger* GLogInitializer()
+{
+	static CLogger Logger;
+	return &Logger;
 }

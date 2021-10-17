@@ -1,8 +1,11 @@
 #include "PlatformImplement.h"
 #include <intrin.h>
+void* FPlatform::InterlockedCompareExchangePointerImpl(void* volatile* Dest, void* Exchange, void* Comparand)
+{
+	return ::_InterlockedCompareExchangePointer(Dest, Exchange, Comparand);
+}
 
-
-void* FPlatformImplement::InterlockedExchangePtr(void** Dest, void* Exchange) {
+void* FPlatform::InterlockedExchangePointerImpl(void** Dest, void* Exchange) {
 #ifdef _WIN32
 	return ::_InterlockedExchangePointer(Dest, Exchange);
 #elif __clang__
@@ -10,14 +13,14 @@ void* FPlatformImplement::InterlockedExchangePtr(void** Dest, void* Exchange) {
 #endif
 }
 
-void FPlatformImplement::MemoryBarrier() {
+void FPlatform::MemoryBarrierImpl() {
 #ifdef _WIN32
 	_mm_sfence();
 #elif __clang__
 	__sync_synchronize();
 #endif
 }
-unsigned char FPlatformImplement::BitScanForwardImpl(unsigned long* Index, unsigned long Mask)
+unsigned char FPlatform::BitScanForwardImpl(unsigned long* Index, unsigned long Mask)
 {
 #ifdef _WIN32
 	return _BitScanForward(Index, Mask);
@@ -25,7 +28,7 @@ unsigned char FPlatformImplement::BitScanForwardImpl(unsigned long* Index, unsig
 	return __builtin_clz(Index, Mask);
 #endif
 }
-unsigned char FPlatformImplement::BitScanReverseImpl(unsigned long* Index, unsigned long Mask)
+unsigned char FPlatform::BitScanReverseImpl(unsigned long* Index, unsigned long Mask)
 {
 #ifdef _WIN32
 	return _BitScanReverse(Index, Mask);

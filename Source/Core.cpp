@@ -6,12 +6,12 @@
 
 void CoreInitialize()
 {
-	GLogger = std::make_unique<CLogger>();
+
 }
 
 void CoreUninitialize()
 {
-	GLogger.reset();
+
 }
 
 std::string TranslateHResult(HRESULT Hr)

@@ -8,19 +8,18 @@
 #include "CoreApi.h"
 #include "Core.h"
 
-//namespace ELogLevel
-//{
-	enum class ELogLevel : uint32_t
-	{
-		kTrace = 1 << 0,
-		kDebug = 1 << 1,
-		kInfo = 1 << 2,
-		kWarning = 1 << 3,
-		kError = 1 << 4,
-		kFatal = 1 << 5,
-		kDisplay = 1 << 6,
-		kLevelBitMask = kTrace | kDebug | kInfo | kWarning | kError | kFatal | kDisplay,
-	};
+
+enum class ELogLevel : uint32_t
+{
+	kTrace = 1 << 0,
+	kDebug = 1 << 1,
+	kInfo = 1 << 2,
+	kWarning = 1 << 3,
+	kError = 1 << 4,
+	kFatal = 1 << 5,
+	kDisplay = 1 << 6,
+	kLevelBitMask = kTrace | kDebug | kInfo | kWarning | kError | kFatal | kDisplay,
+};
 
 struct FLogMessage
 {
@@ -173,6 +172,8 @@ protected:
 
 CORE_API const char* ToString(ELogLevel LogLevel);
 
-extern CORE_API std::unique_ptr<CLogger> GLogger;
+extern CORE_API CLogger* GLogger;
+
+CLogger* GLogInitializer();
 
 #define LOG(X, ...) GLogger->Log(ELogLevel::kDisplay, X, ##__VA_ARGS__)

@@ -107,7 +107,7 @@ public:
 		Data.resize(sizeof(FHeader) + GetBodySize());
 	}
 
-	int32_t GetSize() { return Data.size(); }
+	int32_t GetSize() { return (int32_t)Data.size(); }
 
 private:
 	void ReserveSize(uint32_t NewReserveSize)
