@@ -76,8 +76,6 @@ if(WIN32)
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ${CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS_SAVE})
 endif()
 
-
-
 target_include_directories(Core PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/Reflect)
 
@@ -85,8 +83,9 @@ foreach(SourceFile ${CoreSource})
     set(SourceFileInput "${SourceFileInput} ${SourceFile}")
 endforeach()
 
-set(CoreExecutor Reflector.exe)
-set(ReflectorExecuteCommand "${CoreExecutor} -p ${PROJECT_BINARY_DIR} ${SourceFileInput}")
+set(ReflectorExecutor Reflector.exe)
+set(ReflectorExecuteCommand "${ReflectorExecutor} -p ${CMAKE_CURRENT_BINARY_DIR} ${SourceFileInput}")
 
-file(GENERATE OUTPUT "${PROJECT_SOURCE_DIR}/Scripts/reflector.bat"
-    CONTENT "cd ${PROJECT_SOURCE_DIR}/Reflect && ${ReflectorExecuteCommand}")
+file(GENERATE OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/Scripts/reflector.bat"
+    CONTENT "cd ${CMAKE_CURRENT_SOURCE_DIR}/Reflect && ${ReflectorExecuteCommand}")
+  

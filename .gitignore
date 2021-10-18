@@ -45,6 +45,7 @@ CTestTestfile.cmake
 _deps
 # ---CMake---
 
+Scripts/reflector.bat
 
 out/
 build/
