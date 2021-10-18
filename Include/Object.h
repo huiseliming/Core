@@ -158,6 +158,7 @@ O* NewObject(std::string Name = "")
 }
 
 
+#ifdef TESTS_OBJECT
 
 class CORE_API CLASS() OTest : public CObject
 {
@@ -165,6 +166,7 @@ class CORE_API CLASS() OTest : public CObject
 
 };
 
+#endif // DEBUG
 
 
 
