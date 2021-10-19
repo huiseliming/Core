@@ -1,12 +1,12 @@
 #include "Core.h"
 #include "Global.h"
-#include "Logger.h"
+#include "Reflect.h"
 #include <ctime>
 #include <chrono>
 
 void CoreInitialize()
 {
-
+	GMetaTable->Initialize();
 }
 
 void CoreUninitialize()

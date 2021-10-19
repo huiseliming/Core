@@ -177,3 +177,9 @@ extern CORE_API CLogger* GLogger;
 CLogger* GLogInitializer();
 
 #define LOG(X, ...) GLogger->Log(ELogLevel::kDisplay, X, ##__VA_ARGS__)
+
+struct CLogScopeTimeConsume
+{
+
+
+};

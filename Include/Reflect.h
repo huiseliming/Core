@@ -67,7 +67,7 @@ struct CProperty;
 
 // [Begin, End)
 template<typename T>
-struct CRange
+struct CRange 
 {
 	T Begin;
 	T End;
@@ -81,49 +81,49 @@ typedef CRange<Uint32> CUint32Range;
 
 
 enum EClassFlag :Uint32 {
-	ECF_NoneFlag = 0x00000000,
+	ECF_NoneFlag                = 0x00000000,
 	ECF_DefaultConstructorExist = 0x00000001,
-	ECF_DefaultDestructorExist = 0x00000002,
+	ECF_DefaultDestructorExist  = 0x00000002,
 };
 
 enum EFunctionFlag :Uint32 {
-	EFF_NoneFlag = 0x00000000,
+	EFF_NoneFlag   = 0x00000000,
 	EFF_MemberFlag = 0x00000001,
 	EFF_StaticFlag = 0x00000002,
 };
 
 enum EPropertyFlag : Uint32
 {
-	EPF_NoneFlag = 0x00000000,
+	EPF_NoneFlag                 = 0x00000000,
 
-	EPF_BoolFlag = 0x00000001,
-	EPF_Int8Flag = 0x00000002,
-	EPF_Int16Flag = 0x00000004,
-	EPF_Int32Flag = 0x00000008,
-	EPF_Int64Flag = 0x00000010,
-	EPF_Uint8Flag = 0x00000020,
-	EPF_Uint16Flag = 0x00000040,
-	EPF_Uint32Flag = 0x00000080,
-	EPF_Uint64Flag = 0x00000100,
-	EPF_FloatFlag = 0x00000200,
-	EPF_DoubleFlag = 0x00000400,
-	EPF_StringFlag = 0x00000800,
-	EPF_StructFlag = 0x00001000,
-	EPF_ClassFlag = 0x00002000,
-	EPF_EnumFlag = 0x00004000,
+	EPF_BoolFlag                 = 0x00000001,
+	EPF_Int8Flag                 = 0x00000002,
+	EPF_Int16Flag                = 0x00000004,
+	EPF_Int32Flag                = 0x00000008,
+	EPF_Int64Flag                = 0x00000010,
+	EPF_Uint8Flag                = 0x00000020,
+	EPF_Uint16Flag               = 0x00000040,
+	EPF_Uint32Flag               = 0x00000080,
+	EPF_Uint64Flag               = 0x00000100,
+	EPF_FloatFlag                = 0x00000200,
+	EPF_DoubleFlag               = 0x00000400,
+	EPF_StringFlag               = 0x00000800,
+	EPF_StructFlag               = 0x00001000,
+	EPF_ClassFlag                = 0x00002000,
+	EPF_EnumFlag			     = 0x00004000,
 
-	EPF_ArrayFlag = 0x00004000,
-	EPF_MapFlag = 0x00008000,
+	EPF_ArrayFlag                = 0x00004000,
+	EPF_MapFlag                  = 0x00008000,
 
-	EPF_PointerFlag = 0x10000000,
-	EPF_ReferenceFlag = 0x20000000,
-	EPF_ConstValueFlag = 0x40000000,
-	EPF_ConstPointerceFlag = 0x80000000,
+	EPF_PointerFlag              = 0x10000000,
+	EPF_ReferenceFlag            = 0x20000000,
+	EPF_ConstValueFlag           = 0x40000000,
+	EPF_ConstPointerceFlag       = 0x80000000,
 
-	EPF_IntegerMaskBitFlag = EPF_Int8Flag | EPF_Int16Flag | EPF_Int32Flag | EPF_Int64Flag | EPF_Uint8Flag | EPF_Uint16Flag | EPF_Uint32Flag | EPF_Uint64Flag,
+	EPF_IntegerMaskBitFlag       = EPF_Int8Flag | EPF_Int16Flag | EPF_Int32Flag | EPF_Int64Flag | EPF_Uint8Flag | EPF_Uint16Flag | EPF_Uint32Flag | EPF_Uint64Flag,
 	EPF_FloatingPointMaskBitFlag = EPF_FloatFlag | EPF_DoubleFlag,
-	EPF_TypeMaskBitFlag = 0x0000FFFF,
-	EPF_QualifierMaskBitFlag = 0xF0000000,
+	EPF_TypeMaskBitFlag          = 0x0000FFFF,
+	EPF_QualifierMaskBitFlag     = 0xF0000000,
 };
 
 #ifdef CORE_MODULE
@@ -132,7 +132,7 @@ enum EPropertyFlag : Uint32
 #pragma warning (disable: 4251)
 #endif
 
-struct CORE_API FFunction
+struct CORE_API FFunction 
 {
 	STRING_TYPE Name{ "" };
 	void* Ptr{ nullptr };
@@ -180,8 +180,8 @@ public:
 	std::vector<STRING_TYPE> Alias;
 	std::unordered_map<std::string, STRING_TYPE> Data;
 
-	bool HasFlag(Uint32 InFlag) { return Flag & InFlag; }
-	void AddFlag(Uint32 InFlag) { Flag = Flag | InFlag; }
+	bool HasFlag(Uint32 InFlag)    { return Flag & InFlag; }
+	void AddFlag(Uint32 InFlag)    { Flag = Flag | InFlag; }
 	void RemoveFlag(Uint32 InFlag) { Flag = Flag & !InFlag; }
 
 #ifdef COMPILE_REFLECTOR
@@ -226,16 +226,16 @@ struct CORE_API CStruct : public CMeta
 #endif
 	size_t Size{ 0 };
 	std::vector<std::unique_ptr<CProperty>> Properties;
-	CStruct* Parent{ nullptr };
+	CStruct* Parent{nullptr};
 	std::vector<const CInterface*> Interfaces;
 
 	// CAST RANGE [CastStart, CastEnd)
 	CUint32Range CastRange;
 
-	FPNew         New{ nullptr };
-	FPDelete      Delete{ nullptr };
+	FPNew         New        { nullptr };
+	FPDelete      Delete     { nullptr };
 	FPConstructor Constructor{ nullptr };
-	FPDestructor  Destructor{ nullptr };
+	FPDestructor  Destructor { nullptr };
 };
 
 struct CORE_API CClass : public CStruct
@@ -278,10 +278,10 @@ struct CORE_API CEnumClass : public CMeta
 struct CORE_API CMetaTable {
 public:
 	CMetaTable();
-	std::unordered_map<std::string, int32_t> NameToId;
+	std::unordered_map<std::string, Uint32> NameToId;
 	std::vector<CMeta*> Metas;
-	std::atomic<int32_t> IdCounter{ 1 };
-	std::list<std::function<bool()>> DeferredRegisterList;
+	std::atomic<Uint32> IdCounter{ 1 };
+	std::list<std::function<void()>> DeferredRegisterList;
 	std::list<std::function<void()>> StaticMetaIdInitializerList;
 
 	static CMetaTable& Get();
@@ -308,9 +308,7 @@ public:
 /**
  * can be used after global initialization is complete
 **/
-#ifndef COMPILE_REFLECTOR
 extern CORE_API CMetaTable* GMetaTable;
-#endif
 
 template<typename T>
 struct TEnumClass {};
