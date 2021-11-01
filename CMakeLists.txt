@@ -68,9 +68,9 @@ target_include_directories(Core PUBLIC
 
 target_compile_definitions(Core PUBLIC CORE_MODULE)
 
-# if("${PROJECT_NAME}" STREQUAL "Core")
+if("${PROJECT_NAME}" STREQUAL "Core")
     add_subdirectory(Tests)
-# endif()
+endif()
 
 if(WIN32)
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ${CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS_SAVE})
