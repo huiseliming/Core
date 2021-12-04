@@ -60,10 +60,7 @@ target_include_directories(Core PUBLIC
 
 # For windows export symbols
 include(GenerateExportHeader)
-generate_export_header(Core EXPORT_FILE_NAME ${CMAKE_CURRENT_BINARY_DIR}/Include/CoreExport.h)
-target_include_directories(Core PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/Include> #for export header
-    )
+generate_export_header(Core EXPORT_FILE_NAME ${CMAKE_CURRENT_SOURCE_DIR}/Include/CoreExport.h)
 
 
 target_compile_definitions(Core PUBLIC CORE_MODULE)

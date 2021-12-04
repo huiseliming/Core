@@ -19,11 +19,11 @@
 #endif
 
 #ifdef __REFLECTOR__
-#define CLASS(...)     __attribute__((annotate("Class"    __VA_OPT__(",") #__VA_ARGS__)))
-#define STRUCT(...)    __attribute__((annotate("Struct"   __VA_OPT__(",") #__VA_ARGS__)))
-#define ENUM(...)      __attribute__((annotate("Enum"     __VA_OPT__(",") #__VA_ARGS__)))
-#define PROPERTY(...)  __attribute__((annotate("Property" __VA_OPT__(",") #__VA_ARGS__)))
-#define FUNCTION(...)  __attribute__((annotate("Function" __VA_OPT__(",") #__VA_ARGS__)))
+#define CLASS(...)     __attribute__((annotate("Meta" __VA_OPT__(",") #__VA_ARGS__)))
+#define STRUCT(...)    __attribute__((annotate("Meta" __VA_OPT__(",") #__VA_ARGS__)))
+#define ENUM(...)      __attribute__((annotate("Meta" __VA_OPT__(",") #__VA_ARGS__)))
+#define PROPERTY(...)  __attribute__((annotate("Meta" __VA_OPT__(",") #__VA_ARGS__)))
+#define FUNCTION(...)  __attribute__((annotate("Meta" __VA_OPT__(",") #__VA_ARGS__)))
 #else
 #define CLASS(...)
 #define STRUCT(...)
@@ -32,11 +32,11 @@
 #define FUNCTION(...)
 #endif
 
-#define REFLECT_GENERATED_BODY() \
-public:                          \
-static const CMeta* StaticMeta();\
+#define GENERATED_META_BODY()                        \
+public:                                              \
+static FClass* StaticClass();                        \
+static FMeta* StaticMeta();                          \
 static Uint32 MetaId;
-
 
 #ifdef COMPILE_REFLECTOR
 #define STRING_TYPE std::string
@@ -63,7 +63,7 @@ typedef void  (*FPConstructor)(void* O);
 typedef void  (*FPDestructor)(void* O);
 
 struct CClass;
-struct CProperty;
+struct FProperty;
 
 // [Begin, End)
 template<typename T>
@@ -77,7 +77,7 @@ struct CRange
 	}
 };
 
-typedef CRange<Uint32> CUint32Range;
+typedef CRange<Uint32> FUInt32Range;
 
 
 enum EClassFlag :Uint32 {
@@ -101,10 +101,10 @@ enum EPropertyFlag : Uint32
 	EPF_Int16Flag                = 0x00000004,
 	EPF_Int32Flag                = 0x00000008,
 	EPF_Int64Flag                = 0x00000010,
-	EPF_Uint8Flag                = 0x00000020,
-	EPF_Uint16Flag               = 0x00000040,
-	EPF_Uint32Flag               = 0x00000080,
-	EPF_Uint64Flag               = 0x00000100,
+	EPF_UInt8Flag                = 0x00000020,
+	EPF_UInt16Flag               = 0x00000040,
+	EPF_UInt32Flag               = 0x00000080,
+	EPF_UInt64Flag               = 0x00000100,
 	EPF_FloatFlag                = 0x00000200,
 	EPF_DoubleFlag               = 0x00000400,
 	EPF_StringFlag               = 0x00000800,
@@ -112,17 +112,17 @@ enum EPropertyFlag : Uint32
 	EPF_ClassFlag                = 0x00002000,
 	EPF_EnumFlag			     = 0x00004000,
 
-	EPF_ArrayFlag                = 0x00004000,
-	EPF_MapFlag                  = 0x00008000,
+	EPF_ArrayFlag                = 0x00010000,
+	EPF_MapFlag                  = 0x00020000,
 
 	EPF_PointerFlag              = 0x10000000,
 	EPF_ReferenceFlag            = 0x20000000,
 	EPF_ConstValueFlag           = 0x40000000,
-	EPF_ConstPointerceFlag       = 0x80000000,
+	EPF_ConstPointerFlag         = 0x80000000,
 
-	EPF_IntegerMaskBitFlag       = EPF_Int8Flag | EPF_Int16Flag | EPF_Int32Flag | EPF_Int64Flag | EPF_Uint8Flag | EPF_Uint16Flag | EPF_Uint32Flag | EPF_Uint64Flag,
+	EPF_IntegerMaskBitFlag       = EPF_Int8Flag | EPF_Int16Flag | EPF_Int32Flag | EPF_Int64Flag | EPF_UInt8Flag | EPF_UInt16Flag | EPF_UInt32Flag | EPF_UInt64Flag,
 	EPF_FloatingPointMaskBitFlag = EPF_FloatFlag | EPF_DoubleFlag,
-	EPF_TypeMaskBitFlag          = 0x0000FFFF,
+	EPF_TypeMaskBitFlag          = 0x00007FFF,
 	EPF_QualifierMaskBitFlag     = 0xF0000000,
 };
 
@@ -132,15 +132,7 @@ enum EPropertyFlag : Uint32
 #pragma warning (disable: 4251)
 #endif
 
-struct CORE_API FFunction 
-{
-	STRING_TYPE Name{ "" };
-	void* Ptr{ nullptr };
-	const CClass* OwnerClass{ nullptr }; //  Owner {Class | Struct} TypeDescriptor
-	Uint32 Flag{ EFF_NoneFlag }; //EFunctionFlag
-};
-
-struct CORE_API CMeta
+struct CORE_API FMeta
 {
 #ifdef COMPILE_REFLECTOR
 public:
@@ -148,33 +140,35 @@ public:
 	enum EMetaKind {
 		EMK_Meta,
 		EFK_Interface,
-		EFK_EnumClass,
-		EFK_Struct,
+		EFK_Enum,
 		EFK_Class,
+		EFK_Property,
+		EFK_Function,
 	};
 protected:
 	const EMetaKind Kind;
 
 public:
 	EMetaKind GetKind() const { return Kind; }
-	CMeta(const char* InName, Uint32 InFlag = 0, EMetaKind Kind = EMK_Meta)
+	FMeta(const char* InName, Uint32 InFlag = 0, EMetaKind Kind = EMK_Meta)
 		: Name(InName)
 		, Flag(InFlag)
 		, Kind(Kind)
 	{}
 #else
-	CMeta(const char* InName, Uint32 InFlag = 0)
+	FMeta(const char* InName, Uint32 InFlag = 0)
 		: Name(InName)
 		, Flag(InFlag)
 	{}
 #endif
-	CMeta(const CMeta&) = delete;
-	CMeta& operator=(const CMeta&) = delete;
-	CMeta(CMeta&&) = delete;
-	CMeta& operator=(CMeta&&) = delete;
-	virtual ~CMeta() {}
+	FMeta(const FMeta&) = delete;
+	FMeta& operator=(const FMeta&) = delete;
+	FMeta(FMeta&&) = delete;
+	FMeta& operator=(FMeta&&) = delete;
+	virtual ~FMeta() {}
 
-	Uint32 Id{ 0 };
+
+	Uint32 Id{ UINT32_MAX };
 	STRING_TYPE Name;
 	Uint32 Flag{ 0 };
 	std::vector<STRING_TYPE> Alias;
@@ -186,51 +180,78 @@ public:
 
 #ifdef COMPILE_REFLECTOR
 	std::string DeclaredFile;
+	std::string DeclaredFileOnlyNameNoSuffix;
 	bool IsReflectionDataCollectionCompleted{ false };
 	bool IsForwardDeclared{ false };
 #endif // COMPILE_REFLECTOR
 };
 
-struct CORE_API CInterface : public CMeta
+struct CORE_API FFunction : public FMeta
 {
 #ifdef COMPILE_REFLECTOR
-	CInterface(const char* InName, Uint32 InFlag = ECF_NoneFlag, EMetaKind Kind = EFK_Interface)
-		: CMeta(InName, InFlag, Kind)
+	FFunction(const char* InName, Uint32 InFlag = ECF_NoneFlag, EMetaKind Kind = EFK_Function)
+		: FMeta(InName, InFlag, Kind)
 	{}
 
-	static bool classof(const CMeta* F) {
+	static bool classof(const FMeta* F) {
+		return F->GetKind() == EFK_Function;
+	}
+#else
+	FFunction(const char* InName)
+		: FMeta(InName, ECF_NoneFlag)
+	{}
+#endif
+	void* InvokePtr{ nullptr };
+	const CClass* OwnerClass{ nullptr }; //  Owner {Class | Struct} 
+};
+
+
+struct CORE_API FInterface : public FMeta
+{
+#ifdef COMPILE_REFLECTOR
+	FInterface(const char* InName, Uint32 InFlag = ECF_NoneFlag, EMetaKind Kind = EFK_Interface)
+		: FMeta(InName, InFlag, Kind)
+	{}
+
+	static bool classof(const FMeta* F) {
 		return F->GetKind() == EFK_Interface;
 	}
 #else
-	CInterface(const char* InName)
-		: CMeta(InName, ECF_NoneFlag)
+	FInterface(const char* InName)
+		: FMeta(InName, ECF_NoneFlag)
 	{}
 #endif
 	std::vector<FFunction> Functions;
 };
 
-struct CORE_API CStruct : public CMeta
+struct CORE_API FClass : public FMeta
 {
 #ifdef COMPILE_REFLECTOR
-	CStruct(const char* InName, Uint32 InFlag = ECF_NoneFlag, EMetaKind Kind = EFK_Struct)
-		: CMeta(InName, InFlag, Kind)
+	FClass(const char* InName, Uint32 InFlag = ECF_NoneFlag, EMetaKind Kind = EFK_Class)
+		: FMeta(InName, InFlag, Kind)
 	{}
 
-	static bool classof(const CMeta* F) {
-		return F->GetKind() >= EFK_Struct && F->GetKind() <= EFK_Class;
+	static bool classof(const FMeta* F) {
+		return F->GetKind() == EFK_Class;
 	}
 #else
-	CStruct(const char* InName)
-		: CMeta(InName, ECF_NoneFlag)
+	FClass(const char* InName)
+		: FMeta(InName, ECF_NoneFlag)
 	{}
 #endif
 	size_t Size{ 0 };
-	std::vector<std::unique_ptr<CProperty>> Properties;
-	CStruct* Parent{nullptr};
-	std::vector<const CInterface*> Interfaces;
+#ifdef COMPILE_REFLECTOR
+	std::vector<std::unique_ptr<FProperty>> Properties;
+#else
+	std::vector<FProperty*> Properties;
+#endif
+	std::vector<FFunction> Functions;
+
+	FClass* Parent{nullptr};
+	std::vector<const FInterface*> Interfaces;
 
 	// CAST RANGE [CastStart, CastEnd)
-	CUint32Range CastRange;
+	FUInt32Range CastRange;
 
 	FPNew         New        { nullptr };
 	FPDelete      Delete     { nullptr };
@@ -238,57 +259,43 @@ struct CORE_API CStruct : public CMeta
 	FPDestructor  Destructor { nullptr };
 };
 
-struct CORE_API CClass : public CStruct
+struct CORE_API FEnum : public FMeta
 {
 #ifdef COMPILE_REFLECTOR
-	CClass(const char* InName, Uint32 InFlag = ECF_NoneFlag, EMetaKind Kind = EFK_Class)
-		: CStruct(InName, InFlag, Kind)
-	{}
-	static bool classof(const CMeta* F) {
-		return F->GetKind() == EFK_Class;
-	}
-
-#else
-	CClass(const char* InName)
-		: CStruct(InName)
-	{}
-#endif
-	std::vector<FFunction> Functions;
-};
-
-struct CORE_API CEnumClass : public CMeta
-{
-#ifdef COMPILE_REFLECTOR
-	CEnumClass(const char* InName, Uint32 InFlag = 0, EMetaKind Kind = EFK_EnumClass)
-		: CMeta(InName, InFlag, Kind)
+	FEnum(const char* InName, Uint32 InFlag = 0, EMetaKind Kind = EFK_Enum)
+		: FMeta(InName, InFlag, Kind)
 	{}
 
-	static bool classof(const CMeta* F) {
-		return F->GetKind() == EFK_EnumClass;
+	static bool classof(const FMeta* F) {
+		return F->GetKind() == EFK_Enum;
 	}
 #else
-	CEnumClass(const char* InName)
-		: CMeta(InName)
+	FEnum(const char* InName)
+		: FMeta(InName)
 	{}
 #endif
 	Uint32 Size;
+#ifdef COMPILE_REFLECTOR
 	std::vector<std::pair<STRING_TYPE, uint64_t>> Options;
+#else
+	std::unordered_map<uint64_t, STRING_TYPE> Options;
+#endif
 };
 
-struct CORE_API CMetaTable {
+struct CORE_API FMetaTable {
 public:
-	CMetaTable();
+	FMetaTable();
 	std::unordered_map<std::string, Uint32> NameToId;
-	std::vector<CMeta*> Metas;
+	std::vector<FMeta*> Metas;
 	std::atomic<Uint32> IdCounter{ 1 };
 	std::list<std::function<void()>> DeferredRegisterList;
 	std::list<std::function<void()>> StaticMetaIdInitializerList;
 
-	static CMetaTable& Get();
+	static FMetaTable& Get();
 
-	CMeta* GetMeta(const char* MetaName);
-	CMeta* GetMeta(Uint32 MetaId);
-	uint32_t RegisterMetaToTable(CMeta* Meta);
+	FMeta* GetMeta(const char* MetaName);
+	FMeta* GetMeta(Uint32 MetaId);
+	uint32_t RegisterMetaToTable(FMeta* Meta);
 
 	/**
 	 * must be called after global initialization is complete and before use,
@@ -308,7 +315,7 @@ public:
 /**
  * can be used after global initialization is complete
 **/
-extern CORE_API CMetaTable* GMetaTable;
+extern CORE_API FMetaTable* GMetaTable;
 
 template<typename T>
 struct TEnumClass {};
@@ -317,9 +324,9 @@ template<typename T>
 struct TMetaAutoRegister {
 	TMetaAutoRegister()
 	{
-		const CMeta* Meta = T::StaticMeta();
-		CMetaTable::Get().RegisterMetaToTable(const_cast<CMeta*>(Meta));
-		CMetaTable::Get().StaticMetaIdInitializerList.push_back([Meta] { T::MetaId = Meta->Id; });
+		const FMeta* Meta = T::StaticMeta();
+		FMetaTable::Get().RegisterMetaToTable(const_cast<FMeta*>(Meta));
+		FMetaTable::Get().StaticMetaIdInitializerList.push_back([Meta] { T::MetaId = Meta->Id; });
 	}
 };
 
@@ -333,27 +340,37 @@ struct TLifeCycle {
 
 #define OFFSET_VOID_PTR(PVoid,Offset) (void*)(((char*)(PVoid)) + Offset)
 
-struct CORE_API CProperty : public CMeta
+struct CORE_API FProperty : public FMeta
 {
-	CProperty(const char* InName, EPropertyFlag InFlag, Uint32 InOffset, Uint32 InNumber = 1)
-		: CMeta(InName, InFlag), Offset(InOffset), Number(InNumber)
+#ifdef COMPILE_REFLECTOR
+	FProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1, EMetaKind Kind = EFK_Function)
+		: FMeta(InName, InFlag, Kind), Offset(InOffset), Number(InNumber)
 	{}
+
+	static bool classof(const FMeta* F) {
+		return F->GetKind() == EFK_Property;
+	}
+#else
+	FProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
+		: FMeta(InName, InFlag), Offset(InOffset), Number(InNumber)
+	{}
+#endif
 
 	Uint32        Offset{ 0 };
 	Uint32        Number{ 1 };
 
-	virtual void* GetPropertyAddressPtr(void* A) const { return OFFSET_VOID_PTR(A, CProperty::Offset); }
+	virtual void* GetPropertyAddressPtr(void* A) const { return OFFSET_VOID_PTR(A, FProperty::Offset); }
 
 	//bool IsSimpleValueType() { return Flag == kQualifierNoFlag; }
 	bool IsPointerType() { return Flag & EPF_PointerFlag; }
 	bool IsReferenceType() { return Flag & EPF_ReferenceFlag; }
 	bool IsConstValueType() { return Flag & EPF_ConstValueFlag; }
-	bool IsConstPointerType() { return Flag & EPF_ConstPointerceFlag; }
+	bool IsConstPointerType() { return Flag & EPF_ConstPointerFlag; }
 
 	virtual bool IsFloatingPoint() const { return false; }
 	virtual bool IsInteger() const { return false; }
 
-	virtual CMeta* GetMetaPropertyMeta() const { return nullptr; }
+	virtual FMeta* GetMetaPropertyValue() const { return nullptr; }
 
 	virtual Bool GetBoolPropertyValue(void const* Data) const { return false; }
 	virtual std::string GetBoolPropertyValueToString(void const* Data) const { return ""; }
@@ -362,7 +379,7 @@ struct CORE_API CProperty : public CMeta
 	virtual Int64 GetSignedIntPropertyValue(void const* Data) const { return 0; }
 	virtual Uint64 GetUnsignedIntPropertyValue(void const* Data) const { return 0; }
 	virtual double GetFloatingPointPropertyValue(void const* Data) const { return 0.f; }
-	virtual std::string GetNumericPropertyValueToString(void const* Data) const { return ""; }
+	virtual std::string GeTNumericPropertyValueToString(void const* Data) const { return ""; }
 	virtual void SetIntPropertyValue(void* Data, Uint64 Value) const {}
 	virtual void SetIntPropertyValue(void* Data, Int64 Value) const {}
 	virtual void SetFloatingPointPropertyValue(void* Data, double Value) const {}
@@ -430,12 +447,12 @@ struct TPropertyValue
 
 
 template <typename CppType>
-struct TNumericProperty : public CProperty
+struct TNumericProperty : public FProperty
 {
 	using TPropertyValue = TPropertyValue<CppType>;
 
-	TNumericProperty(const char* InName, EPropertyFlag InFlag, Uint32 InOffset, Uint32 InNumber = 1)
-		: CProperty(InName, InFlag, InOffset, InNumber)
+	TNumericProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
+		: FProperty(InName, InFlag, InOffset, InNumber)
 	{
 	}
 
@@ -450,212 +467,209 @@ struct TNumericProperty : public CProperty
 	virtual void SetIntPropertyValue(void* Data, Uint64 Value) const override
 	{
 		assert(TIsIntegral<CppType>::Value);
-		TPropertyValue::SetPropertyValue(OFFSET_VOID_PTR(Data, CProperty::Offset), (CppType)Value);
+		TPropertyValue::SetPropertyValue(OFFSET_VOID_PTR(Data, FProperty::Offset), (CppType)Value);
 	}
 	virtual void SetIntPropertyValue(void* Data, Int64 Value) const override
 	{
 		assert(TIsIntegral<CppType>::Value);
-		TPropertyValue::SetPropertyValue(OFFSET_VOID_PTR(Data, CProperty::Offset), (CppType)Value);
+		TPropertyValue::SetPropertyValue(OFFSET_VOID_PTR(Data, FProperty::Offset), (CppType)Value);
 	}
 	virtual void SetFloatingPointPropertyValue(void* Data, double Value) const override
 	{
 		assert(TIsFloatingPoint<CppType>::Value);
-		TPropertyValue::SetPropertyValue(OFFSET_VOID_PTR(Data, CProperty::Offset), (CppType)Value);
+		TPropertyValue::SetPropertyValue(OFFSET_VOID_PTR(Data, FProperty::Offset), (CppType)Value);
 	}
 	virtual void SetNumericPropertyValueFromString(void* Data, char const* Value) const override
 	{
 #pragma warning(push)
 #pragma warning (disable: 4244)
-		* TPropertyValue::GetPropertyValuePtr(OFFSET_VOID_PTR(Data, CProperty::Offset)) = atoll(Value);
+		* TPropertyValue::GetPropertyValuePtr(OFFSET_VOID_PTR(Data, FProperty::Offset)) = atoll(Value);
 #pragma warning(pop)
 	}
-	virtual std::string GetNumericPropertyValueToString(void const* Data) const override
+	virtual std::string GeTNumericPropertyValueToString(void const* Data) const override
 	{
-		return std::to_string(TPropertyValue::GetPropertyValue(OFFSET_VOID_PTR(Data, CProperty::Offset)));
+		return std::to_string(TPropertyValue::GetPropertyValue(OFFSET_VOID_PTR(Data, FProperty::Offset)));
 	}
 	virtual Int64 GetSignedIntPropertyValue(void const* Data) const override
 	{
 		assert(TIsIntegral<CppType>::Value);
-		return (Int64)TPropertyValue::GetPropertyValue(OFFSET_VOID_PTR(Data, CProperty::Offset));
+		return (Int64)TPropertyValue::GetPropertyValue(OFFSET_VOID_PTR(Data, FProperty::Offset));
 	}
 	virtual Uint64 GetUnsignedIntPropertyValue(void const* Data) const override
 	{
 		assert(TIsIntegral<CppType>::Value);
-		return (Uint64)TPropertyValue::GetPropertyValue(OFFSET_VOID_PTR(Data, CProperty::Offset));
+		return (Uint64)TPropertyValue::GetPropertyValue(OFFSET_VOID_PTR(Data, FProperty::Offset));
 	}
 	virtual double GetFloatingPointPropertyValue(void const* Data) const override
 	{
 		assert(TIsFloatingPoint<CppType>::Value);
-		return (double)TPropertyValue::GetPropertyValue(OFFSET_VOID_PTR(Data, CProperty::Offset));
+		return (double)TPropertyValue::GetPropertyValue(OFFSET_VOID_PTR(Data, FProperty::Offset));
 	}
 
 };
 
 
-struct CBoolProperty : public CProperty
+struct FBoolProperty : public FProperty
 {
-	CBoolProperty(const char* InName, EPropertyFlag InFlag, Uint32 InOffset, Uint32 InNumber = 1)
-		: CProperty(InName, EPropertyFlag(InFlag | EPF_BoolFlag), InOffset, InNumber)
+	FBoolProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
+		: FProperty(InName, EPropertyFlag(InFlag | EPF_BoolFlag), InOffset, InNumber)
 	{}
 	virtual void SetBoolPropertyValue(void* Data, bool Value) const override
 	{
-		TPropertyValue<Bool>::SetPropertyValue(OFFSET_VOID_PTR(Data, CProperty::Offset), (Bool)Value);
+		TPropertyValue<Bool>::SetPropertyValue(OFFSET_VOID_PTR(Data, FProperty::Offset), (Bool)Value);
 	}
 	virtual Bool GetBoolPropertyValue(void const* Data) const  override
 	{
-		return TPropertyValue<Bool>::GetPropertyValue(OFFSET_VOID_PTR(Data, CProperty::Offset));
+		return TPropertyValue<Bool>::GetPropertyValue(OFFSET_VOID_PTR(Data, FProperty::Offset));
 	}
 	virtual std::string GetBoolPropertyValueToString(void const* Data) const override
 	{
-		return TPropertyValue<Bool>::GetPropertyValue(OFFSET_VOID_PTR(Data, CProperty::Offset)) ? "True" : "false";
+		return TPropertyValue<Bool>::GetPropertyValue(OFFSET_VOID_PTR(Data, FProperty::Offset)) ? "True" : "false";
 	}
 };
 
-struct CInt8Property : TNumericProperty<Int8>
+struct FInt8Property : TNumericProperty<Int8>
 {
-	CInt8Property(const char* InName, EPropertyFlag InFlag, Uint32 InOffset, Uint32 InNumber = 1)
+	FInt8Property(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
 		: TNumericProperty<Int8>(InName, EPropertyFlag(InFlag | EPF_Int8Flag), InOffset, InNumber)
 	{}
 };
 
-struct CInt16Property : TNumericProperty<Int16>
+struct FInt16Property : TNumericProperty<Int16>
 {
-	CInt16Property(const char* InName, EPropertyFlag InFlag, Uint32 InOffset, Uint32 InNumber = 1)
+	FInt16Property(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
 		: TNumericProperty<Int16>(InName, EPropertyFlag(InFlag | EPF_Int16Flag), InOffset, InNumber)
 	{}
 };
 
-struct CInt32Property : TNumericProperty<Int32>
+struct FInt32Property : TNumericProperty<Int32>
 {
-	CInt32Property(const char* InName, EPropertyFlag InFlag, Uint32 InOffset, Uint32 InNumber = 1)
+	FInt32Property(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
 		: TNumericProperty<Int32>(InName, EPropertyFlag(InFlag | EPF_Int32Flag), InOffset, InNumber)
 	{}
 };
 
-struct CInt64Property : TNumericProperty<Int64>
+struct FInt64Property : TNumericProperty<Int64>
 {
-	CInt64Property(const char* InName, EPropertyFlag InFlag, Uint32 InOffset, Uint32 InNumber = 1)
+	FInt64Property(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
 		: TNumericProperty<Int64>(InName, EPropertyFlag(InFlag | EPF_Int64Flag), InOffset, InNumber)
 	{}
 };
 
-struct CUint8Property : TNumericProperty<Uint8>
+struct FUInt8Property : TNumericProperty<Uint8>
 {
-	CUint8Property(const char* InName, EPropertyFlag InFlag, Uint32 InOffset, Uint32 InNumber = 1)
-		: TNumericProperty<Uint8>(InName, EPropertyFlag(InFlag | EPF_Uint8Flag), InOffset, InNumber)
+	FUInt8Property(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
+		: TNumericProperty<Uint8>(InName, EPropertyFlag(InFlag | EPF_UInt8Flag), InOffset, InNumber)
 	{}
 };
 
-struct CUint16Property : TNumericProperty<Uint16>
+struct FUInt16Property : TNumericProperty<Uint16>
 {
-	CUint16Property(const char* InName, EPropertyFlag InFlag, Uint32 InOffset, Uint32 InNumber = 1)
-		: TNumericProperty<Uint16>(InName, EPropertyFlag(InFlag | EPF_Uint16Flag), InOffset, InNumber)
+	FUInt16Property(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
+		: TNumericProperty<Uint16>(InName, EPropertyFlag(InFlag | EPF_UInt16Flag), InOffset, InNumber)
 	{}
 };
 
-struct CUint32Property : TNumericProperty<Uint32>
+struct FUInt32Property : TNumericProperty<Uint32>
 {
-	CUint32Property(const char* InName, EPropertyFlag InFlag, Uint32 InOffset, Uint32 InNumber = 1)
-		: TNumericProperty<Uint32>(InName, EPropertyFlag(InFlag | EPF_Uint32Flag), InOffset, InNumber)
+	FUInt32Property(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
+		: TNumericProperty<Uint32>(InName, EPropertyFlag(InFlag | EPF_UInt32Flag), InOffset, InNumber)
 	{}
 };
 
-struct CUint64Property : TNumericProperty<Uint64>
+struct FUInt64Property : TNumericProperty<Uint64>
 {
-	CUint64Property(const char* InName, EPropertyFlag InFlag, Uint32 InOffset, Uint32 InNumber = 1)
-		: TNumericProperty<Uint64>(InName, EPropertyFlag(InFlag | EPF_Uint64Flag), InOffset, InNumber)
+	FUInt64Property(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
+		: TNumericProperty<Uint64>(InName, EPropertyFlag(InFlag | EPF_UInt64Flag), InOffset, InNumber)
 	{}
 };
 
-struct CFloatProperty : TNumericProperty<Float>
+struct FFloatProperty : TNumericProperty<Float>
 {
-	CFloatProperty(const char* InName, EPropertyFlag InFlag, Uint32 InOffset, Uint32 InNumber = 1)
+	FFloatProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
 		: TNumericProperty<Float>(InName, EPropertyFlag(InFlag | EPF_FloatFlag), InOffset, InNumber)
 	{}
 };
 
-struct CDoubleProperty : TNumericProperty<Double>
+struct FDoubleProperty : TNumericProperty<Double>
 {
-	CDoubleProperty(const char* InName, EPropertyFlag InFlag, Uint32 InOffset, Uint32 InNumber = 1)
+	FDoubleProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
 		: TNumericProperty<Double>(InName, EPropertyFlag(InFlag | EPF_DoubleFlag), InOffset, InNumber)
 	{}
 };
 
-struct CStringProperty : public CProperty
+struct FStringProperty : public FProperty
 {
-	CStringProperty(const char* InName, EPropertyFlag InFlag, Uint32 InOffset, Uint32 InNumber = 1)
-		: CProperty(InName, EPropertyFlag(InFlag | EPF_StringFlag), InOffset, InNumber)
+	FStringProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
+		: FProperty(InName, EPropertyFlag(InFlag | EPF_StringFlag), InOffset, InNumber)
 	{}
 
 	virtual std::string GetStringPropertyValue(void const* Data) const override
 	{
-		return TPropertyValue<std::string>::GetPropertyValue(OFFSET_VOID_PTR(Data, CProperty::Offset));
+		return TPropertyValue<std::string>::GetPropertyValue(OFFSET_VOID_PTR(Data, FProperty::Offset));
 	}
 
 	virtual const char* GetStringPropertyDataPtr(void const* Data) const override
 	{
-		return TPropertyValue<std::string>::GetPropertyValue(OFFSET_VOID_PTR(Data, CProperty::Offset)).c_str();
+		return TPropertyValue<std::string>::GetPropertyValue(OFFSET_VOID_PTR(Data, FProperty::Offset)).c_str();
 	}
 
 	virtual void SetStringPropertyValue(void* Data, std::string& Value) const override
 	{
-		TPropertyValue<std::string>::SetPropertyValue(OFFSET_VOID_PTR(Data, CProperty::Offset), Value);
+		TPropertyValue<std::string>::SetPropertyValue(OFFSET_VOID_PTR(Data, FProperty::Offset), Value);
 	}
 
 	virtual void SetStringPropertyValue(void* Data, const char* Value) const override
 	{
-		*TPropertyValue<std::string>::GetPropertyValuePtr(OFFSET_VOID_PTR(Data, CProperty::Offset)) = Value;
+		*TPropertyValue<std::string>::GetPropertyValuePtr(OFFSET_VOID_PTR(Data, FProperty::Offset)) = Value;
 	}
 
-	virtual void SetStringPropertyValue(void* Data, Uint64 Value) const
+	virtual void SetStringPropertyValue(void* Data, Uint64 Value) const override
 	{
-		TPropertyValue<std::string>::SetPropertyValue(OFFSET_VOID_PTR(Data, CProperty::Offset), std::to_string(Value));
+		TPropertyValue<std::string>::SetPropertyValue(OFFSET_VOID_PTR(Data, FProperty::Offset), std::to_string(Value));
 	}
 
-	virtual void SetStringPropertyValue(void* Data, Int64 Value) const
+	virtual void SetStringPropertyValue(void* Data, Int64 Value) const override
 	{
-		TPropertyValue<std::string>::SetPropertyValue(OFFSET_VOID_PTR(Data, CProperty::Offset), std::to_string(Value));
+		TPropertyValue<std::string>::SetPropertyValue(OFFSET_VOID_PTR(Data, FProperty::Offset), std::to_string(Value));
 	}
 
-	virtual void SetStringPropertyValue(void* Data, double Value) const
+	virtual void SetStringPropertyValue(void* Data, double Value) const override
 	{
-		TPropertyValue<std::string>::SetPropertyValue(OFFSET_VOID_PTR(Data, CProperty::Offset), std::to_string(Value));
+		TPropertyValue<std::string>::SetPropertyValue(OFFSET_VOID_PTR(Data, FProperty::Offset), std::to_string(Value));
 	}
 
 
 };
 
-struct CMetaProperty : public CProperty
+struct FMetaProperty : public FProperty
 {
 protected:
-	CMetaProperty(const char* InName, CMeta* InMeta, EPropertyFlag InFlag, Uint32 InOffset, Uint32 InNumber = 1)
-		: CProperty(InName, InFlag, InOffset, InNumber)
-		, Meta(InMeta)
+	FMetaProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
+		: FProperty(InName, InFlag, InOffset, InNumber)
+		, Meta(nullptr)
 	{}
 public:
-	CMeta* Meta;
-
-	virtual CMeta* GetMetaPropertyMeta() const { return Meta; }
+#ifdef COMPILE_REFLECTOR
+	std::string MetaDeclaredName;
+#endif
+	FMeta* Meta;
+	virtual FMeta* GetMetaPropertyValue() const { return Meta; }
 };
 
-struct CStructProperty : public CMetaProperty
+struct FClassProperty : public FMetaProperty
 {
-	CStructProperty(const char* InName, CStruct* InStruct, EPropertyFlag InFlag, Uint32 InOffset, Uint32 InNumber = 1)
-		: CMetaProperty(InName, InStruct, EPropertyFlag(InFlag | EPF_StructFlag), InOffset, InNumber)
+	FClassProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
+		: FMetaProperty(InName, EPropertyFlag(InFlag | EPF_ClassFlag), InOffset, InNumber)
 	{}
+	
+
 };
 
-struct CClassProperty : public CMetaProperty
+struct FEnumProperty : public FMetaProperty
 {
-	CClassProperty(const char* InName, CClass* InClass, EPropertyFlag InFlag, Uint32 InOffset, Uint32 InNumber = 1)
-		: CMetaProperty(InName, InClass, EPropertyFlag(InFlag | EPF_ClassFlag), InOffset, InNumber)
-	{}
-};
-
-struct CEnumProperty : public CMetaProperty
-{
-	CEnumProperty(const char* InName, CEnumClass* InEnum, EPropertyFlag InFlag, Uint32 InOffset, Uint32 InNumber = 1)
-		: CMetaProperty(InName, InEnum, EPropertyFlag(InFlag | EPF_EnumFlag), InOffset, InNumber)
+	FEnumProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
+		: FMetaProperty(InName, EPropertyFlag(InFlag | EPF_EnumFlag), InOffset, InNumber)
 	{}
 };
 
