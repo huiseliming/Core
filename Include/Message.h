@@ -5,7 +5,7 @@
 #include <memory>
 #include <cassert>
 
-class CConnection;
+class SConnection;
 
 struct FMessageData
 {
@@ -119,6 +119,6 @@ private:
 };
 
 struct FMessage {
-	std::shared_ptr<CConnection> MessageOwner;
+	std::shared_ptr<SConnection> MessageOwner;
 	FMessageData MessageData;
 };

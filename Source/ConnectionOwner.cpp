@@ -3,7 +3,95 @@
 #include "Global.h"
 #include "Connection.h"
 
-struct CConnectionOwner::FImpl {
+struct FTcpServer::FImpl 
+{
+	FImpl(uint32_t InNumberOfWorkers, uint32_t InMaxNumOfConnectionsPerIoWorker)
+	{
+		if (InNumberOfWorkers == 0)
+			InNumberOfWorkers = std::thread::hardware_concurrency();
+
+		GLogger->Log(ELogLevel::kInfo, "ConnectionManager Worker Thread Count {:d}", InNumberOfWorkers);
+		for (uint32_t i = 0; i < InNumberOfWorkers; i++) {
+			IoWorkers.emplace_back(std::make_unique<FIoWorker>(InMaxNumOfConnectionsPerIoWorker));
+		}
+	}
+
+	~FImpl()
+	{
+		IoWorkers.clear();
+	}
+
+	struct FIoWorker
+	{
+		FIoWorker(uint32_t InMaxNumOfConnectionsPerIoWorker)
+			: IoContext()
+			, IdleWorker(new asio::io_context::work(IoContext))
+		{
+			Thread = std::move(std::thread([&]{
+				IoContext.run();
+			}));
+		}
+
+		~FIoWorker()
+		{
+			for (size_t i = 0; i < Connections.size(); i++)
+			{
+				auto& Connection = Connections[i];
+			}
+			IdleWorker.reset();
+			Thread.join();
+		}
+
+		asio::io_context IoContext;
+		std::unique_ptr<asio::io_context::work> IdleWorker;
+
+		std::thread Thread;
+		std::vector<std::shared_ptr<SConnection>> Connections;
+	};
+
+	std::vector<std::unique_ptr<FIoWorker>> IoWorkers;
+};
+
+FTcpServer::FTcpServer(uint32_t InNumberOfWorkers, uint32_t InMaxNumOfConnectionsPerIoWorker)
+	: Impl(new FImpl(InNumberOfWorkers, InMaxNumOfConnectionsPerIoWorker))
+{
+}
+
+FTcpServer::~FTcpServer()
+{
+	Impl.reset();
+}
+
+FTcpClientManager::FTcpClientManager()
+{
+	
+}
+
+FTcpClientManager::~FTcpClientManager()
+{
+
+}
+
+struct FTcpClientManager::FImpl
+{
+	FImpl()
+	{
+	}
+
+	~FImpl()
+	{
+	}
+
+	std::vector<std::weak_ptr<SConnection>> Connections;
+};
+
+FTcpClientManager& FTcpClientManager::Instance()
+{
+	static FTcpClientManager TcpClientManager;
+	return TcpClientManager;
+}
+
+struct IConnectionOwner::FImpl {
 	FImpl()
 		: IoContext()
 		, Acceptor(IoContext)
@@ -20,8 +108,8 @@ struct CConnectionOwner::FImpl {
 	TQueue<std::function<void()>, EQueueMode::MPSC> Tasks;
 
 	uint32_t ConnectedConnection{ 0 };
-	std::vector<std::shared_ptr<CConnection>> WaitCleanConnections;
-	std::unordered_map<std::string, std::shared_ptr<CConnection>> ConnectionMap;
+	std::vector<std::shared_ptr<SConnection>> WaitCleanConnections;
+	std::unordered_map<std::string, std::shared_ptr<SConnection>> ConnectionMap;
 
 #ifndef NDEBUG
 	// Check default OnConnectionConnected and OnConnectionDisconnected must be coexist
@@ -52,7 +140,7 @@ struct CConnectionOwner::FImpl {
 #endif // NDEBUG
 };
 
-CConnectionOwner::CConnectionOwner(uint32_t ThreadNumber)
+IConnectionOwner::IConnectionOwner(uint32_t ThreadNumber)
 	: Impl(new FImpl())
 {
 #ifndef NDEBUG
@@ -75,7 +163,7 @@ CConnectionOwner::CConnectionOwner(uint32_t ThreadNumber)
 	}
 }
 
-CConnectionOwner::~CConnectionOwner()
+IConnectionOwner::~IConnectionOwner()
 {
 	for (auto Connection : GetConnectionMap())
 	{
@@ -93,28 +181,28 @@ CConnectionOwner::~CConnectionOwner()
 	}
 }
 
-asio::io_context& CConnectionOwner::GetIoContext() { return Impl->IoContext; }
+asio::io_context& IConnectionOwner::GetIoContext() { return Impl->IoContext; }
 
-TQueue<FMessage, EQueueMode::MPSC>& CConnectionOwner::GetRecvQueue() { return Impl->RecvFrom; }
+TQueue<FMessage, EQueueMode::MPSC>& IConnectionOwner::GetRecvQueue() { return Impl->RecvFrom; }
 
-void CConnectionOwner::IncreaseConnectionCounter() {
+void IConnectionOwner::IncreaseConnectionCounter() {
 	GLogger->Log(ELogLevel::kDebug, "Current Live Connection Count {:d}", ++(Impl->ConnectionCounter));
 }
 
-void CConnectionOwner::DecreaseConnectionCounter() {
+void IConnectionOwner::DecreaseConnectionCounter() {
 	GLogger->Log(ELogLevel::kDebug, "Current Live Connection Count {:d}", --(Impl->ConnectionCounter));
 }
 
-void CConnectionOwner::PushTask(std::function<void()>&& Task) { Impl->Tasks.Enqueue(std::move(Task)); }
+void IConnectionOwner::PushTask(std::function<void()>&& Task) { Impl->Tasks.Enqueue(std::move(Task)); }
 
-void CConnectionOwner::ProcessTask()
+void IConnectionOwner::ProcessTask()
 {
 	std::function<void()> Task;
 	while (Impl->Tasks.Dequeue(Task))
 		Task();
 }
 
-uint32_t CConnectionOwner::ProcessMessage()
+uint32_t IConnectionOwner::ProcessMessage()
 {
 	FMessage Message;
 	uint32_t ProcessMessageCounter = 0;
@@ -125,14 +213,14 @@ uint32_t CConnectionOwner::ProcessMessage()
 	return ProcessMessageCounter;
 }
 
-uint32_t CConnectionOwner::ProcessEvent()
+uint32_t IConnectionOwner::ProcessEvent()
 {
 	assert(Impl->RunInOwnerThread());
 	ProcessTask();
 	return ProcessMessage();
 }
 
-void CConnectionOwner::OnMessage(std::shared_ptr<CConnection> ConnectionPtr, FMessageData& MessageData)
+void IConnectionOwner::OnMessage(std::shared_ptr<SConnection> ConnectionPtr, FMessageData& MessageData)
 {
 	std::string BinaryString = std::format("<{:s}> Recv : ", ConnectionPtr->GetNetworkName());
 	BinaryString.reserve(BinaryString.size() + MessageData.GetBodySize() * 4);
@@ -144,7 +232,7 @@ void CConnectionOwner::OnMessage(std::shared_ptr<CConnection> ConnectionPtr, FMe
 	GLogger->Log(ELogLevel::kInfo, BinaryString);
 }
 
-void CConnectionOwner::OnConnectionConnected(std::shared_ptr<CConnection> ConnectionPtr)
+void IConnectionOwner::OnConnectionConnected(std::shared_ptr<SConnection> ConnectionPtr)
 {
 	assert(Impl->RunInOwnerThread());
 	auto ExistConnection = Impl->ConnectionMap.find(ConnectionPtr->GetNetworkName());
@@ -162,7 +250,7 @@ void CConnectionOwner::OnConnectionConnected(std::shared_ptr<CConnection> Connec
 	GLogger->Log(ELogLevel::kDebug, "Current Connected Connection Count {:d}", ++(Impl->ConnectedConnection));
 }
 
-void CConnectionOwner::OnConnectionDisconnected(std::shared_ptr<CConnection> ConnectionPtr)
+void IConnectionOwner::OnConnectionDisconnected(std::shared_ptr<SConnection> ConnectionPtr)
 {
 	assert(Impl->RunInOwnerThread());
 	for (auto it = Impl->WaitCleanConnections.begin(); it != Impl->WaitCleanConnections.end(); it++)
@@ -179,33 +267,33 @@ PrintToLogger:
 	GLogger->Log(ELogLevel::kDebug, "Current Connected Connection Count {:d} ", --(Impl->ConnectedConnection));
 }
 
-std::unordered_map<std::string, std::shared_ptr<CConnection>>& CConnectionOwner::GetConnectionMap()
+std::unordered_map<std::string, std::shared_ptr<SConnection>>& IConnectionOwner::GetConnectionMap()
 {
 	Impl->RunInOwnerThread();
 	return Impl->ConnectionMap;
 }
 
-bool CConnectionOwner::RunInOwnerThread()
+bool IConnectionOwner::RunInOwnerThread()
 {
 	return Impl->RunInOwnerThread();
 }
 
-bool CConnectionOwner::RunInIoContext()
+bool IConnectionOwner::RunInIoContext()
 {
 	return Impl->RunInIoContext();
 }
 
 CClient::CClient(uint32_t ThreadNumber)
-	: CConnectionOwner(ThreadNumber)
+	: IConnectionOwner(ThreadNumber)
 {
 }
 
-std::future<std::shared_ptr<CConnection>> CClient::ConnectToServer(std::string Address, uint16_t Port)
+std::future<std::shared_ptr<SConnection>> CClient::ConnectToServer(std::string Address, uint16_t Port)
 {
 	assert(Impl->RunInOwnerThread());
-	std::shared_ptr<CConnection> Connection = std::make_shared<CConnection>(*this);
-	std::promise<std::shared_ptr<CConnection>> Promise;
-	std::future<std::shared_ptr<CConnection>> ConnectionFuture = Promise.get_future();
+	std::shared_ptr<SConnection> Connection = std::make_shared<SConnection>(*this, nullptr);
+	std::promise<std::shared_ptr<SConnection>> Promise;
+	std::future<std::shared_ptr<SConnection>> ConnectionFuture = Promise.get_future();
 	try
 	{
 		assert(Connection->SetConnectingSocketState());
@@ -228,13 +316,13 @@ std::future<std::shared_ptr<CConnection>> CClient::ConnectToServer(std::string A
 	catch (const std::exception& Exception)
 	{
 		GLogger->Log(ELogLevel::kWarning, "Exception: {}\n", Exception.what());
-		Promise.set_value(std::shared_ptr<CConnection>());
+		Promise.set_value(std::shared_ptr<SConnection>());
 	}
 	return std::move(ConnectionFuture);
 }
 
 CServer::CServer(uint32_t ThreadNumber)
-	: CConnectionOwner(ThreadNumber)
+	: IConnectionOwner(ThreadNumber)
 {
 }
 
@@ -261,7 +349,7 @@ void CServer::WaitForClientConnection()
 		{
 			if (!ErrorCode)
 			{
-				std::shared_ptr<CConnection> NewConnection = std::make_shared<CConnection>(*this);
+				std::shared_ptr<SConnection> NewConnection = std::make_shared<SConnection>(*this, nullptr);
 				*(asio::ip::tcp::socket*)NewConnection->GetSocket() = std::move(Socket);
 				NewConnection->ConnectToClient();
 				WaitForClientConnection();

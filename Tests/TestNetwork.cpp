@@ -17,7 +17,7 @@ public:
 
     }
 
-    void OnMessage(std::shared_ptr<CConnection> ConnectionPtr, FMessageData& MessageData) override
+    void OnMessage(std::shared_ptr<SConnection> ConnectionPtr, FMessageData& MessageData) override
     {
         Super::OnMessage(ConnectionPtr, MessageData);
         std::string CopyBinary(MessageData.GetBody<char>(), MessageData.GetBodySize());
@@ -40,8 +40,8 @@ int main()
             });
         std::thread T2([] {
             std::vector<std::unique_ptr<CClient>> Clients;
-            std::vector<std::future<std::shared_ptr<CConnection>>> ClientFutureConnections;
-            std::vector<std::shared_ptr<CConnection>> ClientConnections;
+            std::vector<std::future<std::shared_ptr<SConnection>>> ClientFutureConnections;
+            std::vector<std::shared_ptr<SConnection>> ClientConnections;
             for (int32_t i = 0; i < TestClientCounter; i++)
             {
                 Clients.emplace_back(std::make_unique<CClient>(1));
