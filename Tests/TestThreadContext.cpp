@@ -1,6 +1,5 @@
 //#define TESTS_OBJECT
-#include "Object.h"
-
+#include <string>
 int main()
 {
 

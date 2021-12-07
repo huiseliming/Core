@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.20)
+
 if(NOT PROJECT_NAME)
     # export EvnVar VCPKG_ROOT 
     # set vcpkg triplet and toolchain_file, Must before project()
@@ -22,8 +24,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-find_package(asio CONFIG REQUIRED)
 
 #set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY        ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG   ${CMAKE_BINARY_DIR}/lib)
@@ -51,7 +51,18 @@ add_library(Core SHARED
     ${CoreSource}
     ${CoreReflect})
 
-target_link_libraries(Core PRIVATE asio::asio)
+if(NOT TARGET asio)
+    add_library(asio INTERFACE)
+    target_include_directories(asio INTERFACE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/asio/asio/include>
+        $<INSTALL_INTERFACE:Include>
+        )
+    target_compile_definitions(asio
+        INTERFACE ASIO_STANDALONE
+        )
+endif()
+
+target_link_libraries(Core PRIVATE asio)
 
 target_include_directories(Core PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>
