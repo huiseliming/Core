@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "Message.h"
+#include "NetworkProtocol.h"
 #include "Connection.h"
 #include "ConnectionOwner.h"
 

@@ -4,24 +4,27 @@
 #include <cassert>
 
 #define TEST_PORT 1081
-int32_t TestClientCounter = 1;
+int32_t TestClientCounter = 32;
 int32_t TestSendCounter = 128;
 
-class CTestEchoServer : public CServer
+class FTestEchoServer : public FServer
 {
-    using Super = CServer;
+    using Super = FServer;
 public:
-    CTestEchoServer(uint32_t ThreadNumber = 0)
-        : CServer(ThreadNumber)
+    FTestEchoServer(uint32_t ThreadNumber = 0)
+        : FServer(ThreadNumber)
     {
 
     }
 
-    void OnMessage(std::shared_ptr<SConnection> ConnectionPtr, FMessageData& MessageData) override
+    void OnRecvData(std::shared_ptr<SConnection> ConnectionPtr, std::vector<uint8_t>& Data) override
     {
-        Super::OnMessage(ConnectionPtr, MessageData);
-        std::string CopyBinary(MessageData.GetBody<char>(), MessageData.GetBodySize());
-        ConnectionPtr->Send(CopyBinary);
+        Super::OnRecvData(ConnectionPtr, Data);
+        uint8_t* BodyPtr = reinterpret_cast<uint8_t*>(ConnectionPtr->GetNetworkProtocol()->GetBodyPtr(Data.data()));
+        uint32_t BodySize = ConnectionPtr->GetNetworkProtocol()->GetBodySize(Data.data());
+        std::string CopyBinary((char*)BodyPtr, BodySize);
+        std::vector<uint8_t> SendData;
+        ConnectionPtr->Send(Data);
     }
 };
 
@@ -30,7 +33,7 @@ int main()
     CoreInitialize();
     {
         std::thread T1([] {
-            CTestEchoServer TestServer;
+            FTestEchoServer TestServer;
             TestServer.Run(TEST_PORT);
             uint32_t WaitEventCounter = TestSendCounter * TestClientCounter;
             while (WaitEventCounter > 0)
@@ -39,12 +42,12 @@ int main()
             }
             });
         std::thread T2([] {
-            std::vector<std::unique_ptr<CClient>> Clients;
+            std::vector<std::unique_ptr<FClient>> Clients;
             std::vector<std::future<std::shared_ptr<SConnection>>> ClientFutureConnections;
             std::vector<std::shared_ptr<SConnection>> ClientConnections;
             for (int32_t i = 0; i < TestClientCounter; i++)
             {
-                Clients.emplace_back(std::make_unique<CClient>(1));
+                Clients.emplace_back(std::make_unique<FClient>(1));
                 ClientFutureConnections.push_back(Clients[i]->ConnectToServer("127.0.0.1", TEST_PORT));
             }
             while (!ClientFutureConnections.empty())
@@ -68,7 +71,8 @@ int main()
             {
                 for (size_t i = 0; i < ClientConnections.size(); i++)
                 {
-                    ClientConnections[i]->Send(std::format("ClientIndex : {:d}, TestSendCounter : {:d}", i, TestSendCounter));
+                    INetworkProtocol* NetworkProtocol = ClientConnections[i]->GetNetworkProtocol();
+                    ClientConnections[i]->Send(NetworkProtocol->CreateDataFromString(std::format("ClientIndex : {:d}, TestSendCounter : {:d}", i, TestSendCounter)));
                 }
             }
             while (WaitEventCounter > 0) {

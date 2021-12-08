@@ -1,15 +1,13 @@
 #pragma once
+#include <deque>
 #include <memory>
 #include <future>
 #include <cassert>
 #include <system_error>
-#include "Message.h"
+#include <asio.hpp>
+#include "NetworkProtocol.h"
 #include "CoreApi.h"
-
-// define macro SENT_TO_USE_TQUEUE not better performance because Impl->IoContextWriteStrand is lock 
-// SENT_TO_USE_TQUEUE Minimal probability will not activate the write event because Impl->IsWriting.compare_exchange_strong
-// #define SENT_TO_USE_TQUEUE
-
+#include "Global.h"
 
 class FConnectionOwner;
 
@@ -28,22 +26,23 @@ enum class ESocketState : uint32_t {
 class CORE_API SConnection : public std::enable_shared_from_this<SConnection>
 {
 	friend class FConnectionOwner;
-	friend class CClient;
-	friend class CServer;
+	friend class FClient;
+	friend class FServer;
 public:
-	struct FImpl;
-	SConnection(FConnectionOwner& Owner);
+	SConnection(asio::ip::tcp::socket Socket, FConnectionOwner& Owner, INetworkProtocol* NetworkProtocol = INetworkProtocol::DefaultProtocol);
 	SConnection(const SConnection&) = delete;
 	SConnection(SConnection&&) = delete;
 	SConnection& operator=(const SConnection&) = delete;
 	SConnection& operator=(SConnection&&) = delete;
 	virtual ~SConnection();
 
+	INetworkProtocol* GetNetworkProtocol();
 	const char* GetNetworkName();
 	ESocketState GetSocketState();
+
 	void Disconnect();
-	uint64_t Send(const FMessageData& MessageData);
-	uint64_t Send(FMessageData&& MessageData);
+	void Send(const std::vector<uint8_t>& MessageData);
+	void Send(std::vector<uint8_t>&& MessageData);
 
 protected:
 	virtual void OnErrorCode(const std::error_code& ErrorCode);
@@ -62,7 +61,21 @@ private:
 	void* GetSocket();
 
 protected:
-	std::unique_ptr<FImpl> Impl;
+	FConnectionOwner& Owner;
+	asio::io_context& IoContext;
+	asio::io_context::strand IoContextWriteStrand;
+	asio::ip::tcp::socket Socket;
+	std::string NetworkName;
+
+	INetworkProtocol* NetworkProtocol;
+
+	std::deque<std::vector<uint8_t>> SendTo;
+	// free lock queue for recv
+	TQueue<FDataOwner, EQueueMode::MPSC>& RecvFrom;
+	// buffer for read
+	std::vector<uint8_t> DataTemporaryRead;
+	// connection state
+	std::atomic<ESocketState> State{ ESocketState::kInit };
 };
 
 #pragma warning(pop)

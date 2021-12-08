@@ -3,7 +3,7 @@
 #include <future>
 #include "CoreApi.h"
 #include "Queue.h"
-#include "Message.h"
+#include "Connection.h"
 
 class SConnection;
 
@@ -29,7 +29,7 @@ public:
 	virtual ~FConnectionOwner();
 
 	asio::io_context& GetIoContext();
-	TQueue<FMessage, EQueueMode::MPSC>& GetRecvQueue();
+	TQueue<FDataOwner, EQueueMode::MPSC>& GetRecvQueue();
 	void IncreaseConnectionCounter();
 	void DecreaseConnectionCounter();
 	void PushTask(std::function<void()>&& Task);;
@@ -40,9 +40,9 @@ public:
 	std::unordered_map<std::string, std::shared_ptr<SConnection>>& GetConnectionMap();
 
 protected:
-	virtual void OnMessage(std::shared_ptr<SConnection> ConnectionPtr, FMessageData& MessageData);
-	virtual void OnConnectionConnected(std::shared_ptr<SConnection> ConnectionPtr);
-	virtual void OnConnectionDisconnected(std::shared_ptr<SConnection> ConnectionPtr);
+	virtual void OnRecvData(std::shared_ptr<SConnection> ConnectionPtr, std::vector<uint8_t>& Data);
+	virtual void OnConnected(std::shared_ptr<SConnection> ConnectionPtr);
+	virtual void OnDisconnected(std::shared_ptr<SConnection> ConnectionPtr);
 
 protected:
 	bool RunInOwnerThread();
@@ -53,11 +53,11 @@ protected:
 };
 
 
-class CORE_API CClient : public FConnectionOwner
+class CORE_API FClient : public FConnectionOwner
 {
 	using Super = FConnectionOwner;
 public:
-	CClient(uint32_t ThreadNumber);
+	FClient(uint32_t ThreadNumber);
 
 	std::future<std::shared_ptr<SConnection>> ConnectToServer(std::string Address, uint16_t Port);
 	//void OnConnectionConnected(std::shared_ptr<SConnection> ConnectionPtr)
@@ -73,12 +73,12 @@ public:
 protected:
 };
 
-class CORE_API CServer : public FConnectionOwner
+class CORE_API FServer : public FConnectionOwner
 {
 	using Super = FConnectionOwner;
 public:
-	CServer(uint32_t ThreadNumber = 0);
-	virtual ~CServer();
+	FServer(uint32_t ThreadNumber = 0);
+	virtual ~FServer();
 
 	void Run(uint16_t Port);
 	void WaitForClientConnection();

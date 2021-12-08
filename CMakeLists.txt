@@ -62,7 +62,7 @@ if(NOT TARGET asio)
         )
 endif()
 
-target_link_libraries(Core PRIVATE asio)
+target_link_libraries(Core PUBLIC asio)
 
 target_include_directories(Core PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>

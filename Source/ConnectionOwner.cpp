@@ -15,7 +15,7 @@ struct FConnectionOwner::FImpl {
 	std::vector<std::thread> IoContextThreads;
 	std::unique_ptr<asio::io_context::work> IdleWorkerPtr;
 
-	TQueue<FMessage, EQueueMode::MPSC> RecvFrom;
+	TQueue<FDataOwner, EQueueMode::MPSC> RecvFrom;
 	std::atomic<uint32_t> ConnectionCounter{ 0 };
 	TQueue<std::function<void()>, EQueueMode::MPSC> Tasks;
 
@@ -95,7 +95,7 @@ FConnectionOwner::~FConnectionOwner()
 
 asio::io_context& FConnectionOwner::GetIoContext() { return Impl->IoContext; }
 
-TQueue<FMessage, EQueueMode::MPSC>& FConnectionOwner::GetRecvQueue() { return Impl->RecvFrom; }
+TQueue<FDataOwner, EQueueMode::MPSC>& FConnectionOwner::GetRecvQueue() { return Impl->RecvFrom; }
 
 void FConnectionOwner::IncreaseConnectionCounter() {
 	GLogger->Log(ELogLevel::kDebug, "Current Live Connection Count {:d}", ++(Impl->ConnectionCounter));
@@ -116,11 +116,11 @@ void FConnectionOwner::ProcessTask()
 
 uint32_t FConnectionOwner::ProcessMessage()
 {
-	FMessage Message;
+	FDataOwner DataOwner;
 	uint32_t ProcessMessageCounter = 0;
-	while (Impl->RecvFrom.Dequeue(Message)){
+	while (Impl->RecvFrom.Dequeue(DataOwner)){
 		ProcessMessageCounter++;
-		OnMessage(Message.MessageOwner, Message.MessageData);
+		OnRecvData(DataOwner.Owner, DataOwner.Data);
 	}
 	return ProcessMessageCounter;
 }
@@ -132,19 +132,21 @@ uint32_t FConnectionOwner::ProcessEvent()
 	return ProcessMessage();
 }
 
-void FConnectionOwner::OnMessage(std::shared_ptr<SConnection> ConnectionPtr, FMessageData& MessageData)
+void FConnectionOwner::OnRecvData(std::shared_ptr<SConnection> ConnectionPtr, std::vector<uint8_t>& Data)
 {
 	std::string BinaryString = std::format("<{:s}> Recv : ", ConnectionPtr->GetNetworkName());
-	BinaryString.reserve(BinaryString.size() + MessageData.GetBodySize() * 4);
-	for (size_t i = 0; i < MessageData.GetBodySize(); i++)
+	uint8_t* BodyPtr = reinterpret_cast<uint8_t*>(ConnectionPtr->GetNetworkProtocol()->GetBodyPtr(Data.data()));
+	uint32_t BodySize = ConnectionPtr->GetNetworkProtocol()->GetBodySize(Data.data());
+	BinaryString.reserve(BinaryString.size() + BodySize * 4);
+	for (size_t i = 0; i < BodySize; i++)
 	{
 		if (i == 0) BinaryString.append("\n");
-		BinaryString.append(std::format("{:#02x} ", *(MessageData.GetBody<uint8_t>() + i)));
+		BinaryString.append(std::format("{:#02x} ", *(BodyPtr + i)));
 	}
 	GLogger->Log(ELogLevel::kInfo, BinaryString);
 }
 
-void FConnectionOwner::OnConnectionConnected(std::shared_ptr<SConnection> ConnectionPtr)
+void FConnectionOwner::OnConnected(std::shared_ptr<SConnection> ConnectionPtr)
 {
 	assert(Impl->RunInOwnerThread());
 	auto ExistConnection = Impl->ConnectionMap.find(ConnectionPtr->GetNetworkName());
@@ -162,7 +164,7 @@ void FConnectionOwner::OnConnectionConnected(std::shared_ptr<SConnection> Connec
 	GLogger->Log(ELogLevel::kDebug, "Current Connected Connection Count {:d}", ++(Impl->ConnectedConnection));
 }
 
-void FConnectionOwner::OnConnectionDisconnected(std::shared_ptr<SConnection> ConnectionPtr)
+void FConnectionOwner::OnDisconnected(std::shared_ptr<SConnection> ConnectionPtr)
 {
 	assert(Impl->RunInOwnerThread());
 	for (auto it = Impl->WaitCleanConnections.begin(); it != Impl->WaitCleanConnections.end(); it++)
@@ -195,32 +197,28 @@ bool FConnectionOwner::RunInIoContext()
 	return Impl->RunInIoContext();
 }
 
-CClient::CClient(uint32_t ThreadNumber)
+FClient::FClient(uint32_t ThreadNumber)
 	: FConnectionOwner(ThreadNumber)
 {
 }
 
-std::future<std::shared_ptr<SConnection>> CClient::ConnectToServer(std::string Address, uint16_t Port)
+std::future<std::shared_ptr<SConnection>> FClient::ConnectToServer(std::string Address, uint16_t Port)
 {
 	assert(Impl->RunInOwnerThread());
-	std::shared_ptr<SConnection> Connection = std::make_shared<SConnection>(*this);
+	std::shared_ptr<SConnection> Connection;
 	std::promise<std::shared_ptr<SConnection>> Promise;
 	std::future<std::shared_ptr<SConnection>> ConnectionFuture = Promise.get_future();
 	try
 	{
-		assert(Connection->SetConnectingSocketState());
+		//assert(Connection->SetConnectingSocketState());
 		asio::ip::tcp::resolver Resolver(Impl->IoContext);
 		auto Endpoints = Resolver.resolve(Address, std::to_string(Port));
-		asio::async_connect(*(asio::ip::tcp::socket*)Connection->GetSocket(), Endpoints,
-			[this, Connection, Promise = std::move(Promise)](std::error_code ErrorCode, asio::ip::tcp::endpoint endpoint) mutable
-		{
+		std::shared_ptr<asio::ip::tcp::socket> Socket(new asio::ip::tcp::socket(GetIoContext()));
+		asio::async_connect(*Socket, Endpoints, [this, Socket,  Connection, Promise = std::move(Promise)](std::error_code ErrorCode, asio::ip::tcp::endpoint endpoint) mutable {
 			if (!ErrorCode)
 			{
+				Connection = std::make_shared<SConnection>(std::move(*Socket), *this);
 				Connection->ConnectToServer();
-			}
-			else
-			{
-				Connection->ConnectFailed();
 			}
 			Promise.set_value(Connection);
 		});
@@ -233,16 +231,16 @@ std::future<std::shared_ptr<SConnection>> CClient::ConnectToServer(std::string A
 	return std::move(ConnectionFuture);
 }
 
-CServer::CServer(uint32_t ThreadNumber)
+FServer::FServer(uint32_t ThreadNumber)
 	: FConnectionOwner(ThreadNumber)
 {
 }
 
-CServer::~CServer() {
+FServer::~FServer() {
 	Stop();
 }
 
-void CServer::Run(uint16_t Port)
+void FServer::Run(uint16_t Port)
 {
 	if (!CheckRunCallOnce()) return;
 	GLogger->Log(ELogLevel::kInfo, "Server Run");
@@ -254,15 +252,14 @@ void CServer::Run(uint16_t Port)
 	WaitForClientConnection();
 }
 
-void CServer::WaitForClientConnection()
+void FServer::WaitForClientConnection()
 {
 	Impl->Acceptor.async_accept(
 		[this](std::error_code ErrorCode, asio::ip::tcp::socket Socket)
 		{
 			if (!ErrorCode)
 			{
-				std::shared_ptr<SConnection> NewConnection = std::make_shared<SConnection>(*this);
-				*(asio::ip::tcp::socket*)NewConnection->GetSocket() = std::move(Socket);
+				std::shared_ptr<SConnection> NewConnection = std::make_shared<SConnection>(std::move(Socket), *this);
 				NewConnection->ConnectToClient();
 				WaitForClientConnection();
 			}
@@ -274,13 +271,13 @@ void CServer::WaitForClientConnection()
 	);
 }
 
-void CServer::Stop()
+void FServer::Stop()
 {
 	Impl->Acceptor.close();
 	GLogger->Log(ELogLevel::kInfo, "Server Stop");
 }
 
-bool CServer::CheckRunCallOnce()
+bool FServer::CheckRunCallOnce()
 {
 #ifndef NDEBUG
 	if (RunCallOnceFlag)

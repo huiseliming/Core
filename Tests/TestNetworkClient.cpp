@@ -10,12 +10,12 @@ int32_t TestSendCounter = 128;
 int main()
 {
     CoreInitialize();
-    std::vector<std::unique_ptr<CClient>> Clients;
+    std::vector<std::unique_ptr<FClient>> Clients;
     std::vector<std::future<std::shared_ptr<SConnection>>> ClientFutureConnections;
     std::vector<std::shared_ptr<SConnection>> ClientConnections;
     for (int32_t i = 0; i < TestClientCounter; i++)
     {
-        Clients.emplace_back(std::make_unique<CClient>(1));
+        Clients.emplace_back(std::make_unique<FClient>(1));
         ClientFutureConnections.push_back(Clients[i]->ConnectToServer("127.0.0.1", TEST_PORT));
     }
     while (!ClientFutureConnections.empty())
@@ -39,7 +39,8 @@ int main()
     {
         for (size_t i = 0; i < ClientConnections.size(); i++)
         {
-            ClientConnections[i]->Send(std::format("ClientIndex : {:d}, TestSendCounter : {:d}", i, TestSendCounter));
+            INetworkProtocol* NetworkProtocol = ClientConnections[i]->GetNetworkProtocol();
+            ClientConnections[i]->Send(NetworkProtocol->CreateDataFromString(std::format("ClientIndex : {:d}, TestSendCounter : {:d}", i, TestSendCounter)));
         }
     }
     while (WaitEventCounter > 0) {
