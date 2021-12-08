@@ -17,7 +17,7 @@ public:
 
     }
 
-    void OnMessage(std::shared_ptr<CConnection> ConnectionPtr, FMessageData& MessageData) override
+    void OnMessage(std::shared_ptr<SConnection> ConnectionPtr, FMessageData& MessageData) override
     {
         Super::OnMessage(ConnectionPtr, MessageData);
         std::string CopyBinary(MessageData.GetBody<char>(), MessageData.GetBodySize());

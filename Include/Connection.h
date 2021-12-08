@@ -11,7 +11,7 @@
 // #define SENT_TO_USE_TQUEUE
 
 
-class CConnectionOwner;
+class FConnectionOwner;
 
 enum class ESocketState : uint32_t {
 	kInit,
@@ -25,19 +25,19 @@ enum class ESocketState : uint32_t {
 #pragma warning(push)
 #pragma warning (disable: 4251)
 
-class CORE_API CConnection : public std::enable_shared_from_this<CConnection>
+class CORE_API SConnection : public std::enable_shared_from_this<SConnection>
 {
-	friend class CConnectionOwner;
+	friend class FConnectionOwner;
 	friend class CClient;
 	friend class CServer;
 public:
 	struct FImpl;
-	CConnection(CConnectionOwner& Owner);
-	CConnection(const CConnection&) = delete;
-	CConnection(CConnection&&) = delete;
-	CConnection& operator=(const CConnection&) = delete;
-	CConnection& operator=(CConnection&&) = delete;
-	virtual ~CConnection();
+	SConnection(FConnectionOwner& Owner);
+	SConnection(const SConnection&) = delete;
+	SConnection(SConnection&&) = delete;
+	SConnection& operator=(const SConnection&) = delete;
+	SConnection& operator=(SConnection&&) = delete;
+	virtual ~SConnection();
 
 	const char* GetNetworkName();
 	ESocketState GetSocketState();

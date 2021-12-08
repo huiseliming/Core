@@ -4,8 +4,8 @@
 #include "Global.h"
 #include <deque>
 
-struct CConnection::FImpl {
-	FImpl(CConnectionOwner& Owner)
+struct SConnection::FImpl {
+	FImpl(FConnectionOwner& Owner)
 		: Owner(Owner)
 		, IoContext(Owner.GetIoContext())
 		, IoContextWriteStrand(IoContext)
@@ -13,7 +13,7 @@ struct CConnection::FImpl {
 		, RecvFrom(Owner.GetRecvQueue())
 	{
 	}
-	CConnectionOwner& Owner;
+	FConnectionOwner& Owner;
 	asio::io_context& IoContext;
 	asio::io_context::strand IoContextWriteStrand;
 	asio::ip::tcp::socket Socket;
@@ -35,13 +35,13 @@ struct CConnection::FImpl {
 	std::atomic<ESocketState> State{ ESocketState::kInit };
 };
 
-CConnection::CConnection(CConnectionOwner& Owner)
+SConnection::SConnection(FConnectionOwner& Owner)
 	: Impl(new FImpl(Owner))
 {
 	Impl->Owner.IncreaseConnectionCounter();
 }
 
-CConnection::~CConnection()
+SConnection::~SConnection()
 {
 	std::promise<void> Promise;
 	std::future<void> Future = Promise.get_future();
@@ -59,11 +59,11 @@ CConnection::~CConnection()
 	Impl->Owner.DecreaseConnectionCounter();
 }
 
-const char* CConnection::GetNetworkName() { return Impl->NetworkName.c_str(); }
+const char* SConnection::GetNetworkName() { return Impl->NetworkName.c_str(); }
 
-ESocketState CConnection::GetSocketState() { return Impl->State; }
+ESocketState SConnection::GetSocketState() { return Impl->State; }
 
-void CConnection::Disconnect()
+void SConnection::Disconnect()
 {
 	auto Self(this->shared_from_this());
 	asio::dispatch(Impl->IoContext, [this, Self]() mutable {
@@ -77,7 +77,7 @@ void CConnection::Disconnect()
 		});
 }
 
-uint64_t CConnection::Send(const FMessageData& MessageData)
+uint64_t SConnection::Send(const FMessageData& MessageData)
 {
 	uint64_t SequenceNumber = Impl->SequenceNumber++;
 	const_cast<FMessageData&>(MessageData).SetSequenceNumber(SequenceNumber);
@@ -99,7 +99,7 @@ uint64_t CConnection::Send(const FMessageData& MessageData)
 	return SequenceNumber;
 }
 
-uint64_t CConnection::Send(FMessageData&& MessageData)
+uint64_t SConnection::Send(FMessageData&& MessageData)
 {
 	uint64_t SequenceNumber = Impl->SequenceNumber++;
 	const_cast<FMessageData&>(MessageData).SetSequenceNumber(SequenceNumber);
@@ -121,7 +121,7 @@ uint64_t CConnection::Send(FMessageData&& MessageData)
 	return SequenceNumber;
 }
 
-void CConnection::OnErrorCode(const std::error_code& ErrorCode)
+void SConnection::OnErrorCode(const std::error_code& ErrorCode)
 {
 	assert(Impl->Owner.RunInIoContext());
 	if (asio::error::eof == ErrorCode)
@@ -134,7 +134,7 @@ void CConnection::OnErrorCode(const std::error_code& ErrorCode)
 		Impl->Owner.PushTask([Self = shared_from_this()]{ Self->Impl->Owner.OnConnectionDisconnected(Self); });
 }
 
-void CConnection::ReadHeader()
+void SConnection::ReadHeader()
 {
 	auto Self(this->shared_from_this());
 	asio::async_read(Impl->Socket, asio::buffer(Impl->MessageTemporaryRead.GetHeader(), Impl->MessageTemporaryRead.GetHeaderSize()),
@@ -160,7 +160,7 @@ void CConnection::ReadHeader()
 		});
 }
 
-void CConnection::ReadBody()
+void SConnection::ReadBody()
 {
 	auto Self(this->shared_from_this());
 	asio::async_read(Impl->Socket, asio::buffer(Impl->MessageTemporaryRead.GetBody<void>(), Impl->MessageTemporaryRead.GetBodySize()),
@@ -178,7 +178,7 @@ void CConnection::ReadBody()
 		});
 }
 
-void CConnection::WriteHeader()
+void SConnection::WriteHeader()
 {
 	auto Self(this->shared_from_this());
 #ifdef SENT_TO_USE_TQUEUE
@@ -228,7 +228,7 @@ void CConnection::WriteHeader()
 			}));
 }
 
-void CConnection::WriteBody()
+void SConnection::WriteBody()
 {
 	auto Self(this->shared_from_this());
 
@@ -268,37 +268,37 @@ void CConnection::WriteBody()
 			}));
 }
 
-void CConnection::ConnectToServer()
+void SConnection::ConnectToServer()
 {
 	ESocketState ExpectedSocketState = ESocketState::kConnecting;
 	assert(Impl->State.compare_exchange_strong(ExpectedSocketState, ESocketState::kConnected));
 	ConnectToRemote();
 }
 
-void CConnection::ConnectToClient()
+void SConnection::ConnectToClient()
 {
 	ESocketState ExpectedSocketState = ESocketState::kInit;
 	assert(Impl->State.compare_exchange_strong(ExpectedSocketState, ESocketState::kConnected));
 	ConnectToRemote();
 }
 
-void CConnection::ConnectToRemote()
+void SConnection::ConnectToRemote()
 {
 	Impl->NetworkName = std::format("{:s}:{:d}", Impl->Socket.remote_endpoint().address().to_string(), Impl->Socket.remote_endpoint().port());
 	Impl->Owner.PushTask([Self = shared_from_this()]{ Self->Impl->Owner.OnConnectionConnected(Self); });
 	ReadHeader();
 }
 
-void CConnection::ConnectFailed()
+void SConnection::ConnectFailed()
 {
 	ESocketState ExpectedSocketState = ESocketState::kConnecting;
 	assert(Impl->State.compare_exchange_strong(ExpectedSocketState, ESocketState::kConnectFailed));
 }
 
-bool CConnection::SetConnectingSocketState()
+bool SConnection::SetConnectingSocketState()
 {
 	ESocketState ExpectedSocketState = ESocketState::kInit;
 	return Impl->State.compare_exchange_strong(ExpectedSocketState, ESocketState::kConnecting);
 }
 
-void* CConnection::GetSocket(){ return &(Impl->Socket); }
+void* SConnection::GetSocket(){ return &(Impl->Socket); }

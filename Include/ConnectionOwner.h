@@ -5,7 +5,7 @@
 #include "Queue.h"
 #include "Message.h"
 
-class CConnection;
+class SConnection;
 
 namespace asio {
 	class io_context;
@@ -15,18 +15,18 @@ namespace asio {
 #pragma warning(push)
 #pragma warning (disable: 4251)
 
-class CORE_API CConnectionOwner
+class CORE_API FConnectionOwner
 {
-	friend class CConnection;
+	friend class SConnection;
 public:
 	struct FImpl;
 
-	CConnectionOwner(uint32_t ThreadNumber = 0);
-	CConnectionOwner(const CConnectionOwner&) = delete;
-	CConnectionOwner(CConnectionOwner&& Other) = delete;
-	CConnectionOwner& operator=(const CConnectionOwner&) = delete;
-	CConnectionOwner& operator=(CConnectionOwner&& Other) = delete;
-	virtual ~CConnectionOwner();
+	FConnectionOwner(uint32_t ThreadNumber = 0);
+	FConnectionOwner(const FConnectionOwner&) = delete;
+	FConnectionOwner(FConnectionOwner&& Other) = delete;
+	FConnectionOwner& operator=(const FConnectionOwner&) = delete;
+	FConnectionOwner& operator=(FConnectionOwner&& Other) = delete;
+	virtual ~FConnectionOwner();
 
 	asio::io_context& GetIoContext();
 	TQueue<FMessage, EQueueMode::MPSC>& GetRecvQueue();
@@ -37,12 +37,12 @@ public:
 	uint32_t ProcessMessage();
 	uint32_t ProcessEvent();
 
-	std::unordered_map<std::string, std::shared_ptr<CConnection>>& GetConnectionMap();
+	std::unordered_map<std::string, std::shared_ptr<SConnection>>& GetConnectionMap();
 
 protected:
-	virtual void OnMessage(std::shared_ptr<CConnection> ConnectionPtr, FMessageData& MessageData);
-	virtual void OnConnectionConnected(std::shared_ptr<CConnection> ConnectionPtr);
-	virtual void OnConnectionDisconnected(std::shared_ptr<CConnection> ConnectionPtr);
+	virtual void OnMessage(std::shared_ptr<SConnection> ConnectionPtr, FMessageData& MessageData);
+	virtual void OnConnectionConnected(std::shared_ptr<SConnection> ConnectionPtr);
+	virtual void OnConnectionDisconnected(std::shared_ptr<SConnection> ConnectionPtr);
 
 protected:
 	bool RunInOwnerThread();
@@ -53,19 +53,19 @@ protected:
 };
 
 
-class CORE_API CClient : public CConnectionOwner
+class CORE_API CClient : public FConnectionOwner
 {
-	using Super = CConnectionOwner;
+	using Super = FConnectionOwner;
 public:
 	CClient(uint32_t ThreadNumber);
 
-	std::future<std::shared_ptr<CConnection>> ConnectToServer(std::string Address, uint16_t Port);
-	//void OnConnectionConnected(std::shared_ptr<CConnection> ConnectionPtr)
+	std::future<std::shared_ptr<SConnection>> ConnectToServer(std::string Address, uint16_t Port);
+	//void OnConnectionConnected(std::shared_ptr<SConnection> ConnectionPtr)
 	//{
 	//	Super::OnConnectionConnected(ConnectionPtr);
 	//	//do something
 	//};
-	//void OnConnectionDisconnected(std::shared_ptr<CConnection> ConnectionPtr)
+	//void OnConnectionDisconnected(std::shared_ptr<SConnection> ConnectionPtr)
 	//{
 	//	//do something
 	//	Super::OnConnectionDisconnected(ConnectionPtr);
@@ -73,9 +73,9 @@ public:
 protected:
 };
 
-class CORE_API CServer : public CConnectionOwner
+class CORE_API CServer : public FConnectionOwner
 {
-	using Super = CConnectionOwner;
+	using Super = FConnectionOwner;
 public:
 	CServer(uint32_t ThreadNumber = 0);
 	virtual ~CServer();
@@ -84,12 +84,12 @@ public:
 	void WaitForClientConnection();
 	void Stop();
 protected:
-	//void OnConnectionConnected(std::shared_ptr<CConnection> ConnectionPtr) 
+	//void OnConnectionConnected(std::shared_ptr<SConnection> ConnectionPtr) 
 	//{
 	//	Super::OnConnectionConnected(ConnectionPtr);
 	//	//do something
 	//};
-	//void OnConnectionDisconnected(std::shared_ptr<CConnection> ConnectionPtr) 
+	//void OnConnectionDisconnected(std::shared_ptr<SConnection> ConnectionPtr) 
 	//{
 	//	//do something
 	//	Super::OnConnectionDisconnected(ConnectionPtr);

@@ -3,7 +3,7 @@
 #include "Global.h"
 #include "Connection.h"
 
-struct CConnectionOwner::FImpl {
+struct FConnectionOwner::FImpl {
 	FImpl()
 		: IoContext()
 		, Acceptor(IoContext)
@@ -20,8 +20,8 @@ struct CConnectionOwner::FImpl {
 	TQueue<std::function<void()>, EQueueMode::MPSC> Tasks;
 
 	uint32_t ConnectedConnection{ 0 };
-	std::vector<std::shared_ptr<CConnection>> WaitCleanConnections;
-	std::unordered_map<std::string, std::shared_ptr<CConnection>> ConnectionMap;
+	std::vector<std::shared_ptr<SConnection>> WaitCleanConnections;
+	std::unordered_map<std::string, std::shared_ptr<SConnection>> ConnectionMap;
 
 #ifndef NDEBUG
 	// Check default OnConnectionConnected and OnConnectionDisconnected must be coexist
@@ -52,7 +52,7 @@ struct CConnectionOwner::FImpl {
 #endif // NDEBUG
 };
 
-CConnectionOwner::CConnectionOwner(uint32_t ThreadNumber)
+FConnectionOwner::FConnectionOwner(uint32_t ThreadNumber)
 	: Impl(new FImpl())
 {
 #ifndef NDEBUG
@@ -75,7 +75,7 @@ CConnectionOwner::CConnectionOwner(uint32_t ThreadNumber)
 	}
 }
 
-CConnectionOwner::~CConnectionOwner()
+FConnectionOwner::~FConnectionOwner()
 {
 	for (auto Connection : GetConnectionMap())
 	{
@@ -93,28 +93,28 @@ CConnectionOwner::~CConnectionOwner()
 	}
 }
 
-asio::io_context& CConnectionOwner::GetIoContext() { return Impl->IoContext; }
+asio::io_context& FConnectionOwner::GetIoContext() { return Impl->IoContext; }
 
-TQueue<FMessage, EQueueMode::MPSC>& CConnectionOwner::GetRecvQueue() { return Impl->RecvFrom; }
+TQueue<FMessage, EQueueMode::MPSC>& FConnectionOwner::GetRecvQueue() { return Impl->RecvFrom; }
 
-void CConnectionOwner::IncreaseConnectionCounter() {
+void FConnectionOwner::IncreaseConnectionCounter() {
 	GLogger->Log(ELogLevel::kDebug, "Current Live Connection Count {:d}", ++(Impl->ConnectionCounter));
 }
 
-void CConnectionOwner::DecreaseConnectionCounter() {
+void FConnectionOwner::DecreaseConnectionCounter() {
 	GLogger->Log(ELogLevel::kDebug, "Current Live Connection Count {:d}", --(Impl->ConnectionCounter));
 }
 
-void CConnectionOwner::PushTask(std::function<void()>&& Task) { Impl->Tasks.Enqueue(std::move(Task)); }
+void FConnectionOwner::PushTask(std::function<void()>&& Task) { Impl->Tasks.Enqueue(std::move(Task)); }
 
-void CConnectionOwner::ProcessTask()
+void FConnectionOwner::ProcessTask()
 {
 	std::function<void()> Task;
 	while (Impl->Tasks.Dequeue(Task))
 		Task();
 }
 
-uint32_t CConnectionOwner::ProcessMessage()
+uint32_t FConnectionOwner::ProcessMessage()
 {
 	FMessage Message;
 	uint32_t ProcessMessageCounter = 0;
@@ -125,14 +125,14 @@ uint32_t CConnectionOwner::ProcessMessage()
 	return ProcessMessageCounter;
 }
 
-uint32_t CConnectionOwner::ProcessEvent()
+uint32_t FConnectionOwner::ProcessEvent()
 {
 	assert(Impl->RunInOwnerThread());
 	ProcessTask();
 	return ProcessMessage();
 }
 
-void CConnectionOwner::OnMessage(std::shared_ptr<CConnection> ConnectionPtr, FMessageData& MessageData)
+void FConnectionOwner::OnMessage(std::shared_ptr<SConnection> ConnectionPtr, FMessageData& MessageData)
 {
 	std::string BinaryString = std::format("<{:s}> Recv : ", ConnectionPtr->GetNetworkName());
 	BinaryString.reserve(BinaryString.size() + MessageData.GetBodySize() * 4);
@@ -144,7 +144,7 @@ void CConnectionOwner::OnMessage(std::shared_ptr<CConnection> ConnectionPtr, FMe
 	GLogger->Log(ELogLevel::kInfo, BinaryString);
 }
 
-void CConnectionOwner::OnConnectionConnected(std::shared_ptr<CConnection> ConnectionPtr)
+void FConnectionOwner::OnConnectionConnected(std::shared_ptr<SConnection> ConnectionPtr)
 {
 	assert(Impl->RunInOwnerThread());
 	auto ExistConnection = Impl->ConnectionMap.find(ConnectionPtr->GetNetworkName());
@@ -162,7 +162,7 @@ void CConnectionOwner::OnConnectionConnected(std::shared_ptr<CConnection> Connec
 	GLogger->Log(ELogLevel::kDebug, "Current Connected Connection Count {:d}", ++(Impl->ConnectedConnection));
 }
 
-void CConnectionOwner::OnConnectionDisconnected(std::shared_ptr<CConnection> ConnectionPtr)
+void FConnectionOwner::OnConnectionDisconnected(std::shared_ptr<SConnection> ConnectionPtr)
 {
 	assert(Impl->RunInOwnerThread());
 	for (auto it = Impl->WaitCleanConnections.begin(); it != Impl->WaitCleanConnections.end(); it++)
@@ -179,33 +179,33 @@ PrintToLogger:
 	GLogger->Log(ELogLevel::kDebug, "Current Connected Connection Count {:d} ", --(Impl->ConnectedConnection));
 }
 
-std::unordered_map<std::string, std::shared_ptr<CConnection>>& CConnectionOwner::GetConnectionMap()
+std::unordered_map<std::string, std::shared_ptr<SConnection>>& FConnectionOwner::GetConnectionMap()
 {
 	Impl->RunInOwnerThread();
 	return Impl->ConnectionMap;
 }
 
-bool CConnectionOwner::RunInOwnerThread()
+bool FConnectionOwner::RunInOwnerThread()
 {
 	return Impl->RunInOwnerThread();
 }
 
-bool CConnectionOwner::RunInIoContext()
+bool FConnectionOwner::RunInIoContext()
 {
 	return Impl->RunInIoContext();
 }
 
 CClient::CClient(uint32_t ThreadNumber)
-	: CConnectionOwner(ThreadNumber)
+	: FConnectionOwner(ThreadNumber)
 {
 }
 
-std::future<std::shared_ptr<CConnection>> CClient::ConnectToServer(std::string Address, uint16_t Port)
+std::future<std::shared_ptr<SConnection>> CClient::ConnectToServer(std::string Address, uint16_t Port)
 {
 	assert(Impl->RunInOwnerThread());
-	std::shared_ptr<CConnection> Connection = std::make_shared<CConnection>(*this);
-	std::promise<std::shared_ptr<CConnection>> Promise;
-	std::future<std::shared_ptr<CConnection>> ConnectionFuture = Promise.get_future();
+	std::shared_ptr<SConnection> Connection = std::make_shared<SConnection>(*this);
+	std::promise<std::shared_ptr<SConnection>> Promise;
+	std::future<std::shared_ptr<SConnection>> ConnectionFuture = Promise.get_future();
 	try
 	{
 		assert(Connection->SetConnectingSocketState());
@@ -228,13 +228,13 @@ std::future<std::shared_ptr<CConnection>> CClient::ConnectToServer(std::string A
 	catch (const std::exception& Exception)
 	{
 		GLogger->Log(ELogLevel::kWarning, "Exception: {}\n", Exception.what());
-		Promise.set_value(std::shared_ptr<CConnection>());
+		Promise.set_value(std::shared_ptr<SConnection>());
 	}
 	return std::move(ConnectionFuture);
 }
 
 CServer::CServer(uint32_t ThreadNumber)
-	: CConnectionOwner(ThreadNumber)
+	: FConnectionOwner(ThreadNumber)
 {
 }
 
@@ -261,7 +261,7 @@ void CServer::WaitForClientConnection()
 		{
 			if (!ErrorCode)
 			{
-				std::shared_ptr<CConnection> NewConnection = std::make_shared<CConnection>(*this);
+				std::shared_ptr<SConnection> NewConnection = std::make_shared<SConnection>(*this);
 				*(asio::ip::tcp::socket*)NewConnection->GetSocket() = std::move(Socket);
 				NewConnection->ConnectToClient();
 				WaitForClientConnection();
