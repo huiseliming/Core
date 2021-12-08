@@ -105,7 +105,7 @@ void FConnectionOwner::DecreaseConnectionCounter() {
 	GLogger->Log(ELogLevel::kDebug, "Current Live Connection Count {:d}", --(Impl->ConnectionCounter));
 }
 
-void FConnectionOwner::PushTask(std::function<void()>&& Task) { Impl->Tasks.Enqueue(std::move(Task)); }
+void FConnectionOwner::PushTask(std::function<void()> Task) { Impl->Tasks.Enqueue(std::move(Task)); }
 
 void FConnectionOwner::ProcessTask()
 {
@@ -202,7 +202,7 @@ FClient::FClient(uint32_t ThreadNumber)
 {
 }
 
-std::future<std::shared_ptr<SConnection>> FClient::ConnectToServer(std::string Address, uint16_t Port)
+std::future<std::shared_ptr<SConnection>> FClient::ConnectToServer(std::string Address, uint16_t Port, std::function<void(std::shared_ptr<SConnection>)> ConnectCallback)
 {
 	assert(Impl->RunInOwnerThread());
 	std::shared_ptr<SConnection> Connection;
@@ -214,12 +214,14 @@ std::future<std::shared_ptr<SConnection>> FClient::ConnectToServer(std::string A
 		asio::ip::tcp::resolver Resolver(Impl->IoContext);
 		auto Endpoints = Resolver.resolve(Address, std::to_string(Port));
 		std::shared_ptr<asio::ip::tcp::socket> Socket(new asio::ip::tcp::socket(GetIoContext()));
-		asio::async_connect(*Socket, Endpoints, [this, Socket,  Connection, Promise = std::move(Promise)](std::error_code ErrorCode, asio::ip::tcp::endpoint endpoint) mutable {
+		asio::async_connect(*Socket, Endpoints, [this, Socket,  Connection, Promise = std::move(Promise), ConnectCallback = std::move(ConnectCallback)](std::error_code ErrorCode, asio::ip::tcp::endpoint endpoint) mutable {
 			if (!ErrorCode)
 			{
 				Connection = std::make_shared<SConnection>(std::move(*Socket), *this);
-				Connection->ConnectToServer();
 			}
+			PushTask([Connection, ConnectCallback = std::move(ConnectCallback)]{ ConnectCallback(Connection); });
+			if (Connection)
+				Connection->ConnectToServer();
 			Promise.set_value(Connection);
 		});
 	}

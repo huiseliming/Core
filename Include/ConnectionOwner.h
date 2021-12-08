@@ -32,7 +32,7 @@ public:
 	TQueue<FDataOwner, EQueueMode::MPSC>& GetRecvQueue();
 	void IncreaseConnectionCounter();
 	void DecreaseConnectionCounter();
-	void PushTask(std::function<void()>&& Task);;
+	void PushTask(std::function<void()> Task);;
 	void ProcessTask();
 	uint32_t ProcessMessage();
 	uint32_t ProcessEvent();
@@ -52,14 +52,13 @@ protected:
 
 };
 
-
 class CORE_API FClient : public FConnectionOwner
 {
 	using Super = FConnectionOwner;
 public:
 	FClient(uint32_t ThreadNumber);
 
-	std::future<std::shared_ptr<SConnection>> ConnectToServer(std::string Address, uint16_t Port);
+	std::future<std::shared_ptr<SConnection>> ConnectToServer(std::string Address, uint16_t Port, std::function<void(std::shared_ptr<SConnection>)> ConnectCallback = {});
 	//void OnConnectionConnected(std::shared_ptr<SConnection> ConnectionPtr)
 	//{
 	//	Super::OnConnectionConnected(ConnectionPtr);
