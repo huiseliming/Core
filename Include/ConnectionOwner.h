@@ -56,7 +56,7 @@ class CORE_API FClient : public FConnectionOwner
 {
 	using Super = FConnectionOwner;
 public:
-	FClient(uint32_t ThreadNumber);
+	FClient(uint32_t ThreadNumber = 1);
 
 	std::future<std::shared_ptr<SConnection>> ConnectToServer(std::string Address, uint16_t Port, std::function<void(std::shared_ptr<SConnection>)> ConnectCallback = {});
 	//void OnConnectionConnected(std::shared_ptr<SConnection> ConnectionPtr)
