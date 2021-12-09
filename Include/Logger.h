@@ -71,31 +71,31 @@ struct FLogMessage
 	std::string Message;
 };
 
-namespace std{
-	template<>
-	struct hash<FLogMessage> {
-		using result_type = size_t;
-		using argument_type = FLogMessage;
-		uint64_t operator()(const FLogMessage& InLogMessage) const{
-			return std::hash<std::thread::id>()(InLogMessage.ThreadId)^
-				   std::size_t                 (InLogMessage.LogLevel)^
-				   std::hash<std::string>()    (InLogMessage.Message );
-		}
-	};
-
-	template<>
-	struct equal_to<FLogMessage> {
-		typedef FLogMessage first_argument_type;
-		typedef FLogMessage second_argument_type;
-		typedef bool result_type ;
-
-		uint64_t operator()(const FLogMessage& RightLogMessage, const FLogMessage& LeftLogMessage) const {
-			return RightLogMessage.ThreadId == LeftLogMessage.ThreadId &&
-				   RightLogMessage.LogLevel == LeftLogMessage.LogLevel &&
-				   RightLogMessage.Message  == LeftLogMessage.Message   ;
-		}
-	};
-}
+//namespace std{
+//	template<>
+//	struct hash<FLogMessage> {
+//		using result_type = size_t;
+//		using argument_type = FLogMessage;
+//		uint64_t operator()(const FLogMessage& InLogMessage) const{
+//			return std::hash<std::thread::id>()(InLogMessage.ThreadId)^
+//				   std::size_t                 (InLogMessage.LogLevel)^
+//				   std::hash<std::string>()    (InLogMessage.Message );
+//		}
+//	};
+//
+//	template<>
+//	struct equal_to<FLogMessage> {
+//		typedef FLogMessage first_argument_type;
+//		typedef FLogMessage second_argument_type;
+//		typedef bool result_type ;
+//
+//		uint64_t operator()(const FLogMessage& RightLogMessage, const FLogMessage& LeftLogMessage) const {
+//			return RightLogMessage.ThreadId == LeftLogMessage.ThreadId &&
+//				   RightLogMessage.LogLevel == LeftLogMessage.LogLevel &&
+//				   RightLogMessage.Message  == LeftLogMessage.Message   ;
+//		}
+//	};
+//}
 // disable warning 4251
 #pragma warning(push)
 #pragma warning (disable: 4251)
