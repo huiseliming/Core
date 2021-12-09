@@ -65,12 +65,14 @@ target_include_directories(Core PUBLIC
     $<INSTALL_INTERFACE:Include>    #${CMAKE_INSTALL_PREFIX}/include
     )
 
+target_compile_features(Core PRIVATE cxx_std_23)
+
+target_compile_definitions(Core PUBLIC CORE_MODULE)
+
 # For windows export symbols
 include(GenerateExportHeader)
 generate_export_header(Core EXPORT_FILE_NAME ${CMAKE_CURRENT_SOURCE_DIR}/Include/CoreExport.h)
 
-
-target_compile_definitions(Core PUBLIC CORE_MODULE)
 
 if("${PROJECT_NAME}" STREQUAL "Core")
     add_subdirectory(Tests)
