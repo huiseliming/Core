@@ -31,6 +31,8 @@ if("${PROJECT_NAME}" STREQUAL "Core")
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY        ${CMAKE_BINARY_DIR}/bin)
 endif()
 
+find_package(fmt CONFIG REQUIRED)
+
 if(WIN32)
     # set windows export symbols(spawn .lib)
     add_compile_options(/MP)
@@ -59,6 +61,7 @@ if(NOT TARGET asio)
 endif()
 
 target_link_libraries(Core PUBLIC asio)
+target_link_libraries(Core PUBLIC fmt::fmt)
 
 target_include_directories(Core PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Include>

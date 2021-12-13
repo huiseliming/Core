@@ -43,7 +43,7 @@ std::string FormatSystemTime(const time_t& tt)
 #else
 	tm* NowTmPtr = localtime(&tt);
 #endif // DEBUG
-	return std::format("{:d}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}",
+	return fmt::format("{:d}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}",
 		NowTmPtr->tm_year + 1900, NowTmPtr->tm_mon, NowTmPtr->tm_mday,
 		NowTmPtr->tm_hour, NowTmPtr->tm_min, NowTmPtr->tm_sec);
 }

@@ -215,7 +215,7 @@ void SConnection::ConnectToClient()
 
 void SConnection::ConnectToRemote()
 {
-	NetworkName = std::format("{:s}:{:d}", Socket.remote_endpoint().address().to_string(), Socket.remote_endpoint().port());
+	NetworkName = fmt::format("{:s}:{:d}", Socket.remote_endpoint().address().to_string(), Socket.remote_endpoint().port());
 	Owner.PushTask([Self = shared_from_this()]{ Self->Owner.OnConnected(Self); });
 	ReadHeader();
 }

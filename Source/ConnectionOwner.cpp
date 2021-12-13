@@ -134,14 +134,14 @@ uint32_t FConnectionOwner::ProcessEvent()
 
 void FConnectionOwner::OnRecvData(std::shared_ptr<SConnection> ConnectionPtr, std::vector<uint8_t>& Data)
 {
-	std::string BinaryString = std::format("<{:s}> Recv : ", ConnectionPtr->GetNetworkName());
+	std::string BinaryString = fmt::format("<{:s}> Recv : ", ConnectionPtr->GetNetworkName());
 	uint8_t* BodyPtr = reinterpret_cast<uint8_t*>(ConnectionPtr->GetNetworkProtocol()->GetBodyPtr(Data.data()));
 	uint32_t BodySize = ConnectionPtr->GetNetworkProtocol()->GetBodySize(Data.data());
 	BinaryString.reserve(BinaryString.size() + BodySize * 4);
 	for (size_t i = 0; i < BodySize; i++)
 	{
 		if (i == 0) BinaryString.append("\n");
-		BinaryString.append(std::format("{:#02x} ", *(BodyPtr + i)));
+		BinaryString.append(fmt::format("{:#02x} ", *(BodyPtr + i)));
 	}
 	GLogger->Log(ELogLevel::kInfo, BinaryString);
 }

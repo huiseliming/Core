@@ -7,7 +7,7 @@
 #include "Queue.h"
 #include "CoreApi.h"
 #include "Core.h"
-
+#include "fmt/format.h"
 
 enum class ELogLevel : uint32_t
 {
@@ -113,7 +113,7 @@ public:
 	template<typename ... TArgs>
 	void Log(ELogLevel LogLevel, const std::string_view Message, TArgs&& ... Args)
 	{
-		Log(LogLevel, std::format(Message, std::forward<TArgs>(Args)...));
+		Log(LogLevel, fmt::format(Message, std::forward<TArgs>(Args)...));
 	}
 
 	std::future<void> AddLogCallback(std::shared_ptr<std::function<void(const FLogMessage&)>> LogCallback)
@@ -149,7 +149,7 @@ public:
 	//template<typename ... TArgs>
 	//void Log(ELogLevel LogLevel, std::string&& Message, TArgs&& ... Args)
 	//{
-	//	Log(LogLevel, std::format(std::forward<std::string>(Message), std::forward<TArgs>(Args)...));
+	//	Log(LogLevel, fmt::format(std::forward<std::string>(Message), std::forward<TArgs>(Args)...));
 	//}
 
 protected:

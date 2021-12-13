@@ -103,7 +103,7 @@ void CLogger::Loop() {
 				LogMessage.Message.resize(LogMessage.Message.size() - 1);
 		}
 		std::string FormatLog =
-			std::format("[{:s}] [{:#010x}] [{:<7s}] {:s}\n",
+			fmt::format("[{:s}] [{:#010x}] [{:<7s}] {:s}\n",
 				FormatSystemTime(LogMessage.Timestamp),
 				*reinterpret_cast<_Thrd_id_t*>(&LogMessage.ThreadId),
 				ToString(LogMessage.LogLevel),
