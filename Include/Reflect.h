@@ -108,12 +108,12 @@ enum EPropertyFlag : Uint32
 	EPF_FloatFlag                = 0x00000200,
 	EPF_DoubleFlag               = 0x00000400,
 	EPF_StringFlag               = 0x00000800,
-	EPF_StructFlag               = 0x00001000,
-	EPF_ClassFlag                = 0x00002000,
-	EPF_EnumFlag			     = 0x00004000,
+	EPF_ClassFlag                = 0x00001000,
+	EPF_EnumFlag			     = 0x00002000,
 
 	EPF_ArrayFlag                = 0x00010000,
-	EPF_MapFlag                  = 0x00020000,
+	EPF_VectorFlag               = 0x00020000,
+	EPF_MapFlag                  = 0x00040000,
 
 	EPF_PointerFlag              = 0x10000000,
 	EPF_ReferenceFlag            = 0x20000000,
@@ -247,8 +247,12 @@ struct CORE_API FClass : public FMeta
 #endif
 	std::vector<FFunction> Functions;
 
+#ifdef COMPILE_REFLECTOR
+	std::string ParentClassName;
+	std::vector<std::string> InterfaceNames;
+#endif
 	FClass* Parent{nullptr};
-	std::vector<const FInterface*> Interfaces;
+	std::vector<FInterface*> Interfaces;
 
 	// CAST RANGE [CastStart, CastEnd)
 	FUInt32Range CastRange;
@@ -371,6 +375,8 @@ struct CORE_API FProperty : public FMeta
 	virtual bool IsInteger() const { return false; }
 
 	virtual FMeta* GetMetaPropertyValue() const { return nullptr; }
+	virtual FEnum* GetEnumPropertyValue() const { return nullptr; }
+	virtual FClass* GetClassPropertyValue() const { return nullptr; }
 
 	virtual Bool GetBoolPropertyValue(void const* Data) const { return false; }
 	virtual std::string GetBoolPropertyValueToString(void const* Data) const { return ""; }
@@ -387,7 +393,7 @@ struct CORE_API FProperty : public FMeta
 
 	virtual std::string GetStringPropertyValue(void const* Data) const { return ""; }
 	virtual const char* GetStringPropertyDataPtr(void const* Data) const { return ""; }
-	virtual void SetStringPropertyValue(void* Data, std::string& Value) const {}
+	virtual void SetStringPropertyValue(void* Data, const std::string& Value) const {}
 	virtual void SetStringPropertyValue(void* Data, const char* Value) const {}
 	virtual void SetStringPropertyValue(void* Data, Uint64 Value) const {}
 	virtual void SetStringPropertyValue(void* Data, Int64 Value) const {}
@@ -614,7 +620,7 @@ struct FStringProperty : public FProperty
 		return TPropertyValue<std::string>::GetPropertyValue(OFFSET_VOID_PTR(Data, FProperty::Offset)).c_str();
 	}
 
-	virtual void SetStringPropertyValue(void* Data, std::string& Value) const override
+	virtual void SetStringPropertyValue(void* Data, const std::string& Value) const override
 	{
 		TPropertyValue<std::string>::SetPropertyValue(OFFSET_VOID_PTR(Data, FProperty::Offset), Value);
 	}
@@ -657,12 +663,14 @@ public:
 	virtual FMeta* GetMetaPropertyValue() const { return Meta; }
 };
 
+
 struct FClassProperty : public FMetaProperty
 {
 	FClassProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
 		: FMetaProperty(InName, EPropertyFlag(InFlag | EPF_ClassFlag), InOffset, InNumber)
 	{}
-	
+
+	virtual FClass* GetClassPropertyValue() const override { return reinterpret_cast<FClass*>(Meta); }
 
 };
 
@@ -671,7 +679,19 @@ struct FEnumProperty : public FMetaProperty
 	FEnumProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
 		: FMetaProperty(InName, EPropertyFlag(InFlag | EPF_EnumFlag), InOffset, InNumber)
 	{}
+
+	virtual FEnum* GetEnumPropertyValue() const override { return reinterpret_cast<FEnum*>(Meta); }
 };
+
+struct FVectorProperty : public FMetaProperty
+{
+	FVectorProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
+		: FMetaProperty(InName, EPropertyFlag(InFlag | EPF_VectorFlag), InOffset, InNumber)
+	{}
+
+	virtual FMeta* GetMetaPropertyValue() const { return Meta; }
+};
+
 
 
 #ifdef CORE_MODULE
