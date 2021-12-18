@@ -1,7 +1,6 @@
 #pragma once
 #include <functional>
 #include <future>
-#include "CoreApi.h"
 #include "Queue.h"
 #include "Connection.h"
 
@@ -40,6 +39,7 @@ public:
 	std::unordered_map<std::string, std::shared_ptr<SConnection>>& GetConnectionMap();
 
 protected:
+	virtual std::shared_ptr<SConnection> CreateConnection(asio::ip::tcp::socket& Socket);
 	virtual void OnRecvData(std::shared_ptr<SConnection> ConnectionPtr, std::vector<uint8_t>& Data);
 	virtual void OnConnected(std::shared_ptr<SConnection> ConnectionPtr);
 	virtual void OnDisconnected(std::shared_ptr<SConnection> ConnectionPtr);
@@ -59,6 +59,7 @@ public:
 	FClient(uint32_t ThreadNumber = 1);
 
 	std::future<std::shared_ptr<SConnection>> ConnectToServer(std::string Address, uint16_t Port, std::function<void(std::shared_ptr<SConnection>)> ConnectCallback = {});
+	
 	//void OnConnectionConnected(std::shared_ptr<SConnection> ConnectionPtr)
 	//{
 	//	Super::OnConnectionConnected(ConnectionPtr);

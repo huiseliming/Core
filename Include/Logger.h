@@ -9,6 +9,7 @@
 #include "Core.h"
 #include "fmt/format.h"
 
+
 enum class ELogLevel : uint32_t
 {
 	Trace = 1 << 0,

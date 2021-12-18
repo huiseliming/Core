@@ -770,38 +770,38 @@ struct TVectorProperty : public FVectorProperty
 	
 	virtual void* Data(void const* InBaseAddress, UInt32 Offset = 0) override
 	{
-		std::vector<T>* VectorPtr = (std::vector<T>*)InBaseAddress;
-		return VectorPtr->data() + Offset;
+		std::vector<T>* VectorPtr = (std::vector<T>*)OFFSET_VOID_PTR(InBaseAddress, FProperty::Offset);
+		return ((T*)(VectorPtr->data())) + Offset;
 	}
 
 	virtual void PushBack(void const* InBaseAddress, void* InData) override
 	{
-		std::vector<T>* VectorPtr = (std::vector<T>*)InBaseAddress;
+		std::vector<T>* VectorPtr = (std::vector<T>*)OFFSET_VOID_PTR(InBaseAddress, FProperty::Offset);
 		T* Data = (T*)InData;
 		VectorPtr->push_back(*Data);
 	}
 
 	virtual UInt32 Size(void const* InBaseAddress) override
 	{
-		std::vector<T>* VectorPtr = (std::vector<T>*)InBaseAddress;
+		std::vector<T>* VectorPtr = (std::vector<T>*)OFFSET_VOID_PTR(InBaseAddress, FProperty::Offset);
 		return VectorPtr->size();
 	}
 
 	virtual void Reserve(void const* InBaseAddress, UInt32 InSize) override
 	{
-		std::vector<T>* VectorPtr = (std::vector<T>*)InBaseAddress;
+		std::vector<T>* VectorPtr = (std::vector<T>*)OFFSET_VOID_PTR(InBaseAddress, FProperty::Offset);
 		VectorPtr->reserve(InSize);
 	}
 
 	virtual void Resize(void const* InBaseAddress, UInt32 InSize) override
 	{
-		std::vector<T>* VectorPtr = (std::vector<T>*)InBaseAddress;
+		std::vector<T>* VectorPtr = (std::vector<T>*)OFFSET_VOID_PTR(InBaseAddress, FProperty::Offset);
 		VectorPtr->resize(InSize);
 	}
 
 	virtual void Remove(void const* InBaseAddress, UInt32 InIndex) override 
 	{
-		std::vector<T>* VectorPtr = (std::vector<T>*)InBaseAddress;
+		std::vector<T>* VectorPtr = (std::vector<T>*)OFFSET_VOID_PTR(InBaseAddress, FProperty::Offset);
 		VectorPtr->erase(VectorPtr->begin() + InIndex);
 	}
 };

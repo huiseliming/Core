@@ -1,5 +1,6 @@
 #include "Connection.h"
 #include "ConnectionOwner.h"
+#include "Logger.h"
 
 SConnection::SConnection(asio::ip::tcp::socket Socket, FConnectionOwner& Owner, INetworkProtocol* InNetworkProtocol)
 	: Socket(std::move(Socket))
@@ -81,7 +82,7 @@ void SConnection::OnErrorCode(const std::error_code& ErrorCode)
 	{
 		// remote is shutdown if eof 
 	}
-	GLogger->Log(ELogLevel::Warning, "<{:s}> Socket Error : {:s}\n", NetworkName, ErrorCode.message());
+	GLog(ELL_Warning, "<{:s}> Socket Error : {:s}\n", NetworkName, ErrorCode.message());
 	ESocketState ExpectedSocketState = ESocketState::kConnected;
 	if (State.compare_exchange_strong(ExpectedSocketState, ESocketState::kDisconnected))
 		Owner.PushTask([Self = shared_from_this()]{ Self->Owner.OnDisconnected(Self); });

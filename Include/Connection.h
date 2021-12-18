@@ -7,7 +7,7 @@
 #include <asio.hpp>
 #include "NetworkProtocol.h"
 #include "CoreApi.h"
-#include "Global.h"
+#include "Queue.h"
 
 class FConnectionOwner;
 

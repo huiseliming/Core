@@ -162,6 +162,6 @@ void FMetaTable::Initialize()
     }
 #ifdef CORE_MODULE
     std::chrono::steady_clock::time_point End = std::chrono::steady_clock::now();
-    GLogger->Log(ELL_Debug, "GMetaTable Initialize in {:f} seconds", std::chrono::duration<double>(End - Start).count());
+    GLog(ELL_Debug, "GMetaTable Initialize in {:f} seconds", std::chrono::duration<double>(End - Start).count());
 #endif // CORE_MODULE
 }
