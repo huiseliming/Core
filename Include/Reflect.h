@@ -36,7 +36,7 @@
 public:                                              \
 static FClass* StaticClass();                        \
 static FMeta* StaticMeta();                          \
-static Uint32 MetaId;
+static UInt32 MetaId;
 
 #ifdef COMPILE_REFLECTOR
 #define STRING_TYPE std::string
@@ -47,13 +47,13 @@ static Uint32 MetaId;
 typedef void               Void;
 typedef bool               Bool;
 typedef char               Int8;
-typedef unsigned char      Uint8;
+typedef unsigned char      UInt8;
 typedef short              Int16;
-typedef unsigned short     Uint16;
+typedef unsigned short     UInt16;
 typedef int                Int32;
-typedef unsigned int       Uint32;
+typedef unsigned int       UInt32;
 typedef long long          Int64;
-typedef unsigned long long Uint64;
+typedef unsigned long long UInt64;
 typedef float              Float;
 typedef double             Double;
 
@@ -77,22 +77,22 @@ struct CRange
 	}
 };
 
-typedef CRange<Uint32> FUInt32Range;
+typedef CRange<UInt32> FUInt32Range;
 
 
-enum EClassFlag :Uint32 {
+enum EClassFlag :UInt32 {
 	ECF_NoneFlag                = 0x00000000,
 	ECF_DefaultConstructorExist = 0x00000001,
 	ECF_DefaultDestructorExist  = 0x00000002,
 };
 
-enum EFunctionFlag :Uint32 {
+enum EFunctionFlag :UInt32 {
 	EFF_NoneFlag   = 0x00000000,
 	EFF_MemberFlag = 0x00000001,
 	EFF_StaticFlag = 0x00000002,
 };
 
-enum EPropertyFlag : Uint32
+enum EPropertyFlag : UInt32
 {
 	EPF_NoneFlag                 = 0x00000000,
 
@@ -122,8 +122,8 @@ enum EPropertyFlag : Uint32
 
 	EPF_IntegerMaskBitFlag       = EPF_Int8Flag | EPF_Int16Flag | EPF_Int32Flag | EPF_Int64Flag | EPF_UInt8Flag | EPF_UInt16Flag | EPF_UInt32Flag | EPF_UInt64Flag,
 	EPF_FloatingPointMaskBitFlag = EPF_FloatFlag | EPF_DoubleFlag,
-	EPF_TypeMaskBitFlag          = 0x00007FFF,
 	EPF_QualifierMaskBitFlag     = 0xF0000000,
+	EPF_TypeMaskBitFlag          = ~EPF_QualifierMaskBitFlag,
 };
 
 #ifdef CORE_MODULE
@@ -150,13 +150,13 @@ protected:
 
 public:
 	EMetaKind GetKind() const { return Kind; }
-	FMeta(const char* InName, Uint32 InFlag = 0, EMetaKind Kind = EMK_Meta)
+	FMeta(const char* InName, UInt32 InFlag = 0, EMetaKind Kind = EMK_Meta)
 		: Name(InName)
 		, Flag(InFlag)
 		, Kind(Kind)
 	{}
 #else
-	FMeta(const char* InName, Uint32 InFlag = 0)
+	FMeta(const char* InName, UInt32 InFlag = 0)
 		: Name(InName)
 		, Flag(InFlag)
 	{}
@@ -168,17 +168,18 @@ public:
 	virtual ~FMeta() {}
 
 
-	Uint32 Id{ UINT32_MAX };
+	UInt32 Id{ UINT32_MAX };
 	STRING_TYPE Name;
-	Uint32 Flag{ 0 };
+	UInt32 Flag{ 0 };
 	std::vector<STRING_TYPE> Alias;
-	std::unordered_map<std::string, STRING_TYPE> Data;
+	std::unordered_map<std::string, STRING_TYPE> MetaData;
 
-	bool HasFlag(Uint32 InFlag)    { return Flag & InFlag; }
-	void AddFlag(Uint32 InFlag)    { Flag = Flag | InFlag; }
-	void RemoveFlag(Uint32 InFlag) { Flag = Flag & !InFlag; }
+	bool HasFlag(UInt32 InFlag)    { return Flag & InFlag; }
+	void AddFlag(UInt32 InFlag)    { Flag = Flag | InFlag; }
+	void RemoveFlag(UInt32 InFlag) { Flag = Flag & !InFlag; }
 
 #ifdef COMPILE_REFLECTOR
+	bool IsRootForCodeGenerator{false};
 	std::string DeclaredFile;
 	std::string DeclaredFileOnlyNameNoSuffix;
 	bool IsReflectionDataCollectionCompleted{ false };
@@ -189,7 +190,7 @@ public:
 struct CORE_API FFunction : public FMeta
 {
 #ifdef COMPILE_REFLECTOR
-	FFunction(const char* InName, Uint32 InFlag = ECF_NoneFlag, EMetaKind Kind = EFK_Function)
+	FFunction(const char* InName, UInt32 InFlag = ECF_NoneFlag, EMetaKind Kind = EFK_Function)
 		: FMeta(InName, InFlag, Kind)
 	{}
 
@@ -209,7 +210,7 @@ struct CORE_API FFunction : public FMeta
 struct CORE_API FInterface : public FMeta
 {
 #ifdef COMPILE_REFLECTOR
-	FInterface(const char* InName, Uint32 InFlag = ECF_NoneFlag, EMetaKind Kind = EFK_Interface)
+	FInterface(const char* InName, UInt32 InFlag = ECF_NoneFlag, EMetaKind Kind = EFK_Interface)
 		: FMeta(InName, InFlag, Kind)
 	{}
 
@@ -227,9 +228,13 @@ struct CORE_API FInterface : public FMeta
 struct CORE_API FClass : public FMeta
 {
 #ifdef COMPILE_REFLECTOR
-	FClass(const char* InName, Uint32 InFlag = ECF_NoneFlag, EMetaKind Kind = EFK_Class)
+	FClass(const char* InName, UInt32 InFlag = ECF_NoneFlag, EMetaKind Kind = EFK_Class)
 		: FMeta(InName, InFlag, Kind)
-	{}
+	{
+#ifdef COMPILE_REFLECTOR
+		IsRootForCodeGenerator = true;
+#endif
+	}
 
 	static bool classof(const FMeta* F) {
 		return F->GetKind() == EFK_Class;
@@ -240,11 +245,7 @@ struct CORE_API FClass : public FMeta
 	{}
 #endif
 	size_t Size{ 0 };
-#ifdef COMPILE_REFLECTOR
-	std::vector<std::unique_ptr<FProperty>> Properties;
-#else
 	std::vector<FProperty*> Properties;
-#endif
 	std::vector<FFunction> Functions;
 
 #ifdef COMPILE_REFLECTOR
@@ -266,9 +267,13 @@ struct CORE_API FClass : public FMeta
 struct CORE_API FEnum : public FMeta
 {
 #ifdef COMPILE_REFLECTOR
-	FEnum(const char* InName, Uint32 InFlag = 0, EMetaKind Kind = EFK_Enum)
+	FEnum(const char* InName, UInt32 InFlag = 0, EMetaKind Kind = EFK_Enum)
 		: FMeta(InName, InFlag, Kind)
-	{}
+	{
+#ifdef COMPILE_REFLECTOR
+		IsRootForCodeGenerator = true;
+#endif
+	}
 
 	static bool classof(const FMeta* F) {
 		return F->GetKind() == EFK_Enum;
@@ -278,7 +283,7 @@ struct CORE_API FEnum : public FMeta
 		: FMeta(InName)
 	{}
 #endif
-	Uint32 Size;
+	UInt32 Size;
 #ifdef COMPILE_REFLECTOR
 	std::vector<std::pair<STRING_TYPE, uint64_t>> Options;
 #else
@@ -289,16 +294,16 @@ struct CORE_API FEnum : public FMeta
 struct CORE_API FMetaTable {
 public:
 	FMetaTable();
-	std::unordered_map<std::string, Uint32> NameToId;
+	std::unordered_map<std::string, UInt32> NameToId;
 	std::vector<FMeta*> Metas;
-	std::atomic<Uint32> IdCounter{ 1 };
+	std::atomic<UInt32> IdCounter{ 1 };
 	std::list<std::function<void()>> DeferredRegisterList;
 	std::list<std::function<void()>> StaticMetaIdInitializerList;
 
 	static FMetaTable& Get();
 
 	FMeta* GetMeta(const char* MetaName);
-	FMeta* GetMeta(Uint32 MetaId);
+	FMeta* GetMeta(UInt32 MetaId);
 	uint32_t RegisterMetaToTable(FMeta* Meta);
 
 	/**
@@ -347,21 +352,26 @@ struct TLifeCycle {
 struct CORE_API FProperty : public FMeta
 {
 #ifdef COMPILE_REFLECTOR
-	FProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1, EMetaKind Kind = EFK_Function)
+	FProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, UInt32 InOffset = 0, UInt32 InNumber = 1, EMetaKind Kind = EFK_Property)
 		: FMeta(InName, InFlag, Kind), Offset(InOffset), Number(InNumber)
-	{}
+	{
+	}
 
 	static bool classof(const FMeta* F) {
 		return F->GetKind() == EFK_Property;
 	}
 #else
-	FProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
+	FProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, UInt32 InOffset = 0, UInt32 InNumber = 1)
 		: FMeta(InName, InFlag), Offset(InOffset), Number(InNumber)
 	{}
 #endif
 
-	Uint32        Offset{ 0 };
-	Uint32        Number{ 1 };
+#ifdef COMPILE_REFLECTOR
+	std::string MetaDeclaredName;
+#endif
+
+	UInt32        Offset{ 0 };
+	UInt32        Number{ 1 };
 
 	virtual void* GetPropertyAddressPtr(void* A) const { return OFFSET_VOID_PTR(A, FProperty::Offset); }
 
@@ -377,16 +387,17 @@ struct CORE_API FProperty : public FMeta
 	virtual FMeta* GetMetaPropertyValue() const { return nullptr; }
 	virtual FEnum* GetEnumPropertyValue() const { return nullptr; }
 	virtual FClass* GetClassPropertyValue() const { return nullptr; }
+	virtual FProperty* GetVectorDataProperty() const { return nullptr; }
 
 	virtual Bool GetBoolPropertyValue(void const* Data) const { return false; }
 	virtual std::string GetBoolPropertyValueToString(void const* Data) const { return ""; }
 	virtual void SetBoolPropertyValue(void* Data, bool Value) const {}
 
 	virtual Int64 GetSignedIntPropertyValue(void const* Data) const { return 0; }
-	virtual Uint64 GetUnsignedIntPropertyValue(void const* Data) const { return 0; }
+	virtual UInt64 GetUnsignedIntPropertyValue(void const* Data) const { return 0; }
 	virtual double GetFloatingPointPropertyValue(void const* Data) const { return 0.f; }
 	virtual std::string GeTNumericPropertyValueToString(void const* Data) const { return ""; }
-	virtual void SetIntPropertyValue(void* Data, Uint64 Value) const {}
+	virtual void SetIntPropertyValue(void* Data, UInt64 Value) const {}
 	virtual void SetIntPropertyValue(void* Data, Int64 Value) const {}
 	virtual void SetFloatingPointPropertyValue(void* Data, double Value) const {}
 	virtual void SetNumericPropertyValueFromString(void* Data, char const* Value) const {}
@@ -395,7 +406,7 @@ struct CORE_API FProperty : public FMeta
 	virtual const char* GetStringPropertyDataPtr(void const* Data) const { return ""; }
 	virtual void SetStringPropertyValue(void* Data, const std::string& Value) const {}
 	virtual void SetStringPropertyValue(void* Data, const char* Value) const {}
-	virtual void SetStringPropertyValue(void* Data, Uint64 Value) const {}
+	virtual void SetStringPropertyValue(void* Data, UInt64 Value) const {}
 	virtual void SetStringPropertyValue(void* Data, Int64 Value) const {}
 	virtual void SetStringPropertyValue(void* Data, double Value) const {}
 };
@@ -457,7 +468,7 @@ struct TNumericProperty : public FProperty
 {
 	using TPropertyValue = TPropertyValue<CppType>;
 
-	TNumericProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
+	TNumericProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, UInt32 InOffset = 0, UInt32 InNumber = 1)
 		: FProperty(InName, InFlag, InOffset, InNumber)
 	{
 	}
@@ -470,7 +481,7 @@ struct TNumericProperty : public FProperty
 	{
 		return TIsIntegral<CppType>::Value;
 	}
-	virtual void SetIntPropertyValue(void* Data, Uint64 Value) const override
+	virtual void SetIntPropertyValue(void* Data, UInt64 Value) const override
 	{
 		assert(TIsIntegral<CppType>::Value);
 		TPropertyValue::SetPropertyValue(OFFSET_VOID_PTR(Data, FProperty::Offset), (CppType)Value);
@@ -501,10 +512,10 @@ struct TNumericProperty : public FProperty
 		assert(TIsIntegral<CppType>::Value);
 		return (Int64)TPropertyValue::GetPropertyValue(OFFSET_VOID_PTR(Data, FProperty::Offset));
 	}
-	virtual Uint64 GetUnsignedIntPropertyValue(void const* Data) const override
+	virtual UInt64 GetUnsignedIntPropertyValue(void const* Data) const override
 	{
 		assert(TIsIntegral<CppType>::Value);
-		return (Uint64)TPropertyValue::GetPropertyValue(OFFSET_VOID_PTR(Data, FProperty::Offset));
+		return (UInt64)TPropertyValue::GetPropertyValue(OFFSET_VOID_PTR(Data, FProperty::Offset));
 	}
 	virtual double GetFloatingPointPropertyValue(void const* Data) const override
 	{
@@ -517,9 +528,13 @@ struct TNumericProperty : public FProperty
 
 struct FBoolProperty : public FProperty
 {
-	FBoolProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
+	FBoolProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, UInt32 InOffset = 0, UInt32 InNumber = 1)
 		: FProperty(InName, EPropertyFlag(InFlag | EPF_BoolFlag), InOffset, InNumber)
-	{}
+	{
+#ifdef COMPILE_REFLECTOR
+		MetaDeclaredName = "Bool";
+#endif
+	}
 	virtual void SetBoolPropertyValue(void* Data, bool Value) const override
 	{
 		TPropertyValue<Bool>::SetPropertyValue(OFFSET_VOID_PTR(Data, FProperty::Offset), (Bool)Value);
@@ -536,79 +551,123 @@ struct FBoolProperty : public FProperty
 
 struct FInt8Property : TNumericProperty<Int8>
 {
-	FInt8Property(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
+	FInt8Property(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, UInt32 InOffset = 0, UInt32 InNumber = 1)
 		: TNumericProperty<Int8>(InName, EPropertyFlag(InFlag | EPF_Int8Flag), InOffset, InNumber)
-	{}
+	{
+#ifdef COMPILE_REFLECTOR
+		MetaDeclaredName = "Int8";
+#endif
+	}
 };
 
 struct FInt16Property : TNumericProperty<Int16>
 {
-	FInt16Property(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
+	FInt16Property(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, UInt32 InOffset = 0, UInt32 InNumber = 1)
 		: TNumericProperty<Int16>(InName, EPropertyFlag(InFlag | EPF_Int16Flag), InOffset, InNumber)
-	{}
+	{
+#ifdef COMPILE_REFLECTOR
+		MetaDeclaredName = "Int16";
+#endif
+	}
 };
 
 struct FInt32Property : TNumericProperty<Int32>
 {
-	FInt32Property(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
+	FInt32Property(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, UInt32 InOffset = 0, UInt32 InNumber = 1)
 		: TNumericProperty<Int32>(InName, EPropertyFlag(InFlag | EPF_Int32Flag), InOffset, InNumber)
-	{}
+	{
+#ifdef COMPILE_REFLECTOR
+		MetaDeclaredName = "Int32";
+#endif
+	}
 };
 
 struct FInt64Property : TNumericProperty<Int64>
 {
-	FInt64Property(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
+	FInt64Property(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, UInt32 InOffset = 0, UInt32 InNumber = 1)
 		: TNumericProperty<Int64>(InName, EPropertyFlag(InFlag | EPF_Int64Flag), InOffset, InNumber)
-	{}
+	{
+#ifdef COMPILE_REFLECTOR
+		MetaDeclaredName = "Int64";
+#endif
+	}
 };
 
-struct FUInt8Property : TNumericProperty<Uint8>
+struct FUInt8Property : TNumericProperty<UInt8>
 {
-	FUInt8Property(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
-		: TNumericProperty<Uint8>(InName, EPropertyFlag(InFlag | EPF_UInt8Flag), InOffset, InNumber)
-	{}
+	FUInt8Property(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, UInt32 InOffset = 0, UInt32 InNumber = 1)
+		: TNumericProperty<UInt8>(InName, EPropertyFlag(InFlag | EPF_UInt8Flag), InOffset, InNumber)
+	{
+#ifdef COMPILE_REFLECTOR
+		MetaDeclaredName = "UInt8";
+#endif
+	}
 };
 
-struct FUInt16Property : TNumericProperty<Uint16>
+struct FUInt16Property : TNumericProperty<UInt16>
 {
-	FUInt16Property(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
-		: TNumericProperty<Uint16>(InName, EPropertyFlag(InFlag | EPF_UInt16Flag), InOffset, InNumber)
-	{}
+	FUInt16Property(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, UInt32 InOffset = 0, UInt32 InNumber = 1)
+		: TNumericProperty<UInt16>(InName, EPropertyFlag(InFlag | EPF_UInt16Flag), InOffset, InNumber)
+	{
+#ifdef COMPILE_REFLECTOR
+		MetaDeclaredName = "UInt16";
+#endif
+	}
 };
 
-struct FUInt32Property : TNumericProperty<Uint32>
+struct FUInt32Property : TNumericProperty<UInt32>
 {
-	FUInt32Property(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
-		: TNumericProperty<Uint32>(InName, EPropertyFlag(InFlag | EPF_UInt32Flag), InOffset, InNumber)
-	{}
+	FUInt32Property(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, UInt32 InOffset = 0, UInt32 InNumber = 1)
+		: TNumericProperty<UInt32>(InName, EPropertyFlag(InFlag | EPF_UInt32Flag), InOffset, InNumber)
+	{
+#ifdef COMPILE_REFLECTOR
+		MetaDeclaredName = "UInt32";
+#endif
+	}
 };
 
-struct FUInt64Property : TNumericProperty<Uint64>
+struct FUInt64Property : TNumericProperty<UInt64>
 {
-	FUInt64Property(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
-		: TNumericProperty<Uint64>(InName, EPropertyFlag(InFlag | EPF_UInt64Flag), InOffset, InNumber)
-	{}
+	FUInt64Property(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, UInt32 InOffset = 0, UInt32 InNumber = 1)
+		: TNumericProperty<UInt64>(InName, EPropertyFlag(InFlag | EPF_UInt64Flag), InOffset, InNumber)
+	{
+#ifdef COMPILE_REFLECTOR
+		MetaDeclaredName = "UInt64";
+#endif
+	}
 };
 
 struct FFloatProperty : TNumericProperty<Float>
 {
-	FFloatProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
+	FFloatProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, UInt32 InOffset = 0, UInt32 InNumber = 1)
 		: TNumericProperty<Float>(InName, EPropertyFlag(InFlag | EPF_FloatFlag), InOffset, InNumber)
-	{}
+	{
+#ifdef COMPILE_REFLECTOR
+		MetaDeclaredName = "Float";
+#endif
+	}
 };
 
 struct FDoubleProperty : TNumericProperty<Double>
 {
-	FDoubleProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
+	FDoubleProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, UInt32 InOffset = 0, UInt32 InNumber = 1)
 		: TNumericProperty<Double>(InName, EPropertyFlag(InFlag | EPF_DoubleFlag), InOffset, InNumber)
-	{}
+	{
+#ifdef COMPILE_REFLECTOR
+		MetaDeclaredName = "Double";
+#endif
+	}
 };
 
 struct FStringProperty : public FProperty
 {
-	FStringProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
+	FStringProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, UInt32 InOffset = 0, UInt32 InNumber = 1)
 		: FProperty(InName, EPropertyFlag(InFlag | EPF_StringFlag), InOffset, InNumber)
-	{}
+	{
+#ifdef COMPILE_REFLECTOR
+		MetaDeclaredName = "std::string";
+#endif
+	}
 
 	virtual std::string GetStringPropertyValue(void const* Data) const override
 	{
@@ -630,7 +689,7 @@ struct FStringProperty : public FProperty
 		*TPropertyValue<std::string>::GetPropertyValuePtr(OFFSET_VOID_PTR(Data, FProperty::Offset)) = Value;
 	}
 
-	virtual void SetStringPropertyValue(void* Data, Uint64 Value) const override
+	virtual void SetStringPropertyValue(void* Data, UInt64 Value) const override
 	{
 		TPropertyValue<std::string>::SetPropertyValue(OFFSET_VOID_PTR(Data, FProperty::Offset), std::to_string(Value));
 	}
@@ -651,48 +710,122 @@ struct FStringProperty : public FProperty
 struct FMetaProperty : public FProperty
 {
 protected:
-	FMetaProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
+	FMetaProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, UInt32 InOffset = 0, UInt32 InNumber = 1)
 		: FProperty(InName, InFlag, InOffset, InNumber)
 		, Meta(nullptr)
 	{}
 public:
-#ifdef COMPILE_REFLECTOR
-	std::string MetaDeclaredName;
-#endif
 	FMeta* Meta;
 	virtual FMeta* GetMetaPropertyValue() const { return Meta; }
 };
 
-
 struct FClassProperty : public FMetaProperty
 {
-	FClassProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
+	FClassProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, UInt32 InOffset = 0, UInt32 InNumber = 1)
 		: FMetaProperty(InName, EPropertyFlag(InFlag | EPF_ClassFlag), InOffset, InNumber)
 	{}
-
 	virtual FClass* GetClassPropertyValue() const override { return reinterpret_cast<FClass*>(Meta); }
-
 };
 
 struct FEnumProperty : public FMetaProperty
 {
-	FEnumProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
+	FEnumProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, UInt32 InOffset = 0, UInt32 InNumber = 1)
 		: FMetaProperty(InName, EPropertyFlag(InFlag | EPF_EnumFlag), InOffset, InNumber)
 	{}
 
 	virtual FEnum* GetEnumPropertyValue() const override { return reinterpret_cast<FEnum*>(Meta); }
 };
 
-struct FVectorProperty : public FMetaProperty
+struct FContainerProperty : public FProperty
 {
-	FVectorProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, Uint32 InOffset = 0, Uint32 InNumber = 1)
-		: FMetaProperty(InName, EPropertyFlag(InFlag | EPF_VectorFlag), InOffset, InNumber)
+	FContainerProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, UInt32 InOffset = 0, UInt32 InNumber = 1)
+		: FProperty(InName, EPropertyFlag(InFlag), InOffset, InNumber)
 	{}
-
-	virtual FMeta* GetMetaPropertyValue() const { return Meta; }
 };
 
+struct FVectorProperty : public FContainerProperty
+{
+	FVectorProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, UInt32 InOffset = 0, UInt32 InNumber = 1)
+		: FContainerProperty(InName, EPropertyFlag(InFlag | EPF_VectorFlag), InOffset, InNumber)
+	{}
 
+	virtual void* Data(void const* InBaseAddress, UInt32 Offset = 0) { return nullptr; }
+	virtual void PushBack(void const* InBaseAddress, void* InData) {}
+	virtual UInt32 Size(void const* InBaseAddress) { return 0; }
+
+	virtual void Reserve(void const* InBaseAddress, UInt32 InSize) {}
+	virtual void Resize(void const* InBaseAddress, UInt32 InSize) {}
+	virtual void Remove(void const* InBaseAddress, UInt32 InIndex) {}
+
+	virtual FProperty* GetVectorDataProperty() const override { return reinterpret_cast<FProperty*>(DataProperty); }
+	FProperty* DataProperty;
+};
+
+template<typename T>
+struct TVectorProperty : public FVectorProperty
+{
+	TVectorProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, UInt32 InOffset = 0, UInt32 InNumber = 1)
+		: FVectorProperty(InName, EPropertyFlag(InFlag), InOffset, InNumber)
+	{}
+	
+	virtual void* Data(void const* InBaseAddress, UInt32 Offset = 0) override
+	{
+		std::vector<T>* VectorPtr = (std::vector<T>*)InBaseAddress;
+		return VectorPtr->data() + Offset;
+	}
+
+	virtual void PushBack(void const* InBaseAddress, void* InData) override
+	{
+		std::vector<T>* VectorPtr = (std::vector<T>*)InBaseAddress;
+		T* Data = (T*)InData;
+		VectorPtr->push_back(*Data);
+	}
+
+	virtual UInt32 Size(void const* InBaseAddress) override
+	{
+		std::vector<T>* VectorPtr = (std::vector<T>*)InBaseAddress;
+		return VectorPtr->size();
+	}
+
+	virtual void Reserve(void const* InBaseAddress, UInt32 InSize) override
+	{
+		std::vector<T>* VectorPtr = (std::vector<T>*)InBaseAddress;
+		VectorPtr->reserve(InSize);
+	}
+
+	virtual void Resize(void const* InBaseAddress, UInt32 InSize) override
+	{
+		std::vector<T>* VectorPtr = (std::vector<T>*)InBaseAddress;
+		VectorPtr->resize(InSize);
+	}
+
+	virtual void Remove(void const* InBaseAddress, UInt32 InIndex) override 
+	{
+		std::vector<T>* VectorPtr = (std::vector<T>*)InBaseAddress;
+		VectorPtr->erase(VectorPtr->begin() + InIndex);
+	}
+};
+
+//
+//template<typename Key, typename Value, typename Map = std::unordered_map<Key, Value>>
+//struct TMapProperty : public FContainerProperty
+//{
+//	TMapProperty(const char* InName = "", EPropertyFlag InFlag = EPF_NoneFlag, UInt32 InOffset = 0, UInt32 InNumber = 1)
+//		: FContainerProperty(InName, EPropertyFlag(InFlag | EPF_MapFlag), InOffset, InNumber)
+//	{}
+//
+//	void* GetKeyDataPtr(void const* InBaseAddress)
+//	{
+//		Map* VectorPtr = (Map*)InBaseAddress;
+//		return VectorPtr->data();
+//	}
+//
+//	void* GetValueDataPtr(void const* InBaseAddress, void* KeyType)
+//	{
+//		Map* VectorPtr = (Map*)InBaseAddress;
+//		return VectorPtr.find();
+//	}
+//};
 
 #ifdef CORE_MODULE
 #pragma warning(pop)

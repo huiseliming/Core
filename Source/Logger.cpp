@@ -8,25 +8,25 @@ CLogger* GLogger = GLogInitializer();
 
 const char* ToString(ELogLevel LogLevel)
 {
-	LogLevel = ELogLevel(static_cast<uint32_t>(LogLevel) & static_cast<uint32_t>(ELogLevel::kLevelBitMask));
+	LogLevel = ELogLevel(static_cast<uint32_t>(LogLevel) & static_cast<uint32_t>(ELogLevel::LevelBitMask));
 	unsigned long Index = 0;
 	assert(uint32_t(LogLevel) != 0);
 	FPlatform::BitScanReverseImpl(&Index, uint32_t(LogLevel));
 	switch (ELogLevel(1 << Index))
 	{
-	case ELogLevel::kTrace:
+	case ELogLevel::Trace:
 		return "Trace";
-	case ELogLevel::kDebug:
+	case ELogLevel::Debug:
 		return "Debug";
-	case ELogLevel::kInfo:
+	case ELogLevel::Info:
 		return "Info";
-	case ELogLevel::kWarning:
+	case ELogLevel::Warning:
 		return "Warning";
-	case ELogLevel::kError:
+	case ELogLevel::Error:
 		return "Error";
-	case ELogLevel::kFatal:
+	case ELogLevel::Fatal:
 		return "Fatal";
-	case ELogLevel::kDisplay:
+	case ELogLevel::Display:
 		return "Display";
 	default:
 		return "None";

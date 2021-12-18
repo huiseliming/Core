@@ -81,7 +81,7 @@ void SConnection::OnErrorCode(const std::error_code& ErrorCode)
 	{
 		// remote is shutdown if eof 
 	}
-	GLogger->Log(ELogLevel::kWarning, "<{:s}> Socket Error : {:s}\n", NetworkName, ErrorCode.message());
+	GLogger->Log(ELogLevel::Warning, "<{:s}> Socket Error : {:s}\n", NetworkName, ErrorCode.message());
 	ESocketState ExpectedSocketState = ESocketState::kConnected;
 	if (State.compare_exchange_strong(ExpectedSocketState, ESocketState::kDisconnected))
 		Owner.PushTask([Self = shared_from_this()]{ Self->Owner.OnDisconnected(Self); });

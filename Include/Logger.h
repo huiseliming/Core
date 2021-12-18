@@ -11,14 +11,14 @@
 
 enum class ELogLevel : uint32_t
 {
-	kTrace = 1 << 0,
-	kDebug = 1 << 1,
-	kInfo = 1 << 2,
-	kWarning = 1 << 3,
-	kError = 1 << 4,
-	kFatal = 1 << 5,
-	kDisplay = 1 << 6,
-	kLevelBitMask = kTrace | kDebug | kInfo | kWarning | kError | kFatal | kDisplay,
+	Trace = 1 << 0,
+	Debug = 1 << 1,
+	Info = 1 << 2,
+	Warning = 1 << 3,
+	Error = 1 << 4,
+	Fatal = 1 << 5,
+	Display = 1 << 6,
+	LevelBitMask = Trace | Debug | Info | Warning | Error | Fatal | Display,
 };
 
 struct FLogMessage
@@ -47,7 +47,7 @@ struct FLogMessage
 		LogLevel = Other.LogLevel;
 		Other.Timestamp = { 0 };
 		Other.ThreadId = std::thread::id();
-		Other.LogLevel = ELogLevel::kTrace;
+		Other.LogLevel = ELogLevel::Trace;
 		Message = std::move(Other.Message);
 	}
 
@@ -60,7 +60,7 @@ struct FLogMessage
 		LogLevel = Other.LogLevel;
 		Other.Timestamp = { 0 };
 		Other.ThreadId = std::thread::id();
-		Other.LogLevel = ELogLevel::kTrace;
+		Other.LogLevel = ELogLevel::Trace;
 		Message = std::move(Other.Message);
 		return *this;
 	}
@@ -176,7 +176,15 @@ extern CORE_API CLogger* GLogger;
 
 CLogger* GLogInitializer();
 
-#define LOG(X, ...) GLogger->Log(ELogLevel::kDisplay, X, ##__VA_ARGS__)
+#define ELL_Trace   ELogLevel::Trace
+#define ELL_Debug   ELogLevel::Debug
+#define ELL_Info    ELogLevel::Info
+#define ELL_Warning ELogLevel::Warning
+#define ELL_Error   ELogLevel::Error
+#define ELL_Fatal   ELogLevel::Fatal
+#define ELL_Display ELogLevel::Display
+
+#define GLog(ELL, X, ...) GLogger->Log(ELL, X, ##__VA_ARGS__)
 
 struct CLogScopeTimeConsume
 {
