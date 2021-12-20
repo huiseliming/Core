@@ -91,12 +91,12 @@ void SConnection::OnErrorCode(const std::error_code& ErrorCode)
 void SConnection::ReadHeader()
 {
 	auto Self(this->shared_from_this());
-	DataTemporaryRead.resize(NetworkProtocol->GetRecvHeaderSize());
+	DataTemporaryRead.resize(NetworkProtocol->GetRecvHeaderSize(nullptr));
 	asio::async_read(
 		Socket, 
 		asio::buffer(
 			DataTemporaryRead.data(), 
-			NetworkProtocol->GetRecvHeaderSize()),
+			NetworkProtocol->GetRecvHeaderSize(nullptr)),
 		[this, Self](std::error_code ErrorCode, std::size_t length)
 		{
 			if (!ErrorCode)
@@ -104,7 +104,7 @@ void SConnection::ReadHeader()
 				uint32_t BodySize = NetworkProtocol->GetRecvBodySize(DataTemporaryRead.data());
 				if (BodySize > 0)
 				{
-					DataTemporaryRead.resize(NetworkProtocol->GetRecvHeaderSize() + BodySize);
+					DataTemporaryRead.resize(NetworkProtocol->GetRecvHeaderSize(DataTemporaryRead.data()) + BodySize);
 					ReadBody();
 				}
 				else
@@ -149,7 +149,7 @@ void SConnection::WriteHeader()
 		Socket, 
 		asio::buffer(
 			NetworkProtocol->GetSendHeaderPtr(SendTo.front().data()), 
-			NetworkProtocol->GetSendHeaderSize()),
+			NetworkProtocol->GetSendHeaderSize(SendTo.front().data())),
 		IoContextWriteStrand.wrap([this, Self](std::error_code ErrorCode, std::size_t Length)
 			{
 				if (!ErrorCode)

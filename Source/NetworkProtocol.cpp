@@ -2,7 +2,7 @@
 
 struct FDefaultProtocol : public INetworkProtocol
 {
-	virtual uint32_t GetHeaderSize() override
+	virtual uint32_t GetHeaderSize(uint8_t* DataPtr) override
 	{
 		return sizeof(uint32_t);
 	}
@@ -16,18 +16,18 @@ struct FDefaultProtocol : public INetworkProtocol
 	}
 	virtual uint8_t* GetBodyPtr(uint8_t* DataPtr) override
 	{
-		return DataPtr + GetHeaderSize();
+		return DataPtr + GetHeaderSize(DataPtr);
 	}
 	void SpawnHeaderFromBody(uint8_t* DataPtr, uint8_t DataSize) override
 	{
-		*(uint32_t*)DataPtr = DataSize - GetHeaderSize();
+		*(uint32_t*)DataPtr = DataSize - GetHeaderSize(DataPtr);
 	}
 	virtual std::vector<uint8_t> CreateDataFromString(std::string Str)
 	{ 
 		std::vector<uint8_t> Data;
-		Data.resize(GetHeaderSize() + Str.size());
+		Data.resize(GetHeaderSize(Data.data()) + Str.size());
 		*(uint32_t*)GetHeaderPtr(Data.data()) = static_cast<uint32_t>(Str.size());
-		std::memcpy(Data.data() + GetHeaderSize(), Str.data(), Str.size());
+		std::memcpy(Data.data() + GetHeaderSize(Data.data()), Str.data(), Str.size());
 		return Data;
 	};
 };
