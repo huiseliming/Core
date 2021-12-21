@@ -59,8 +59,8 @@ public:
 	void WaitForClientConnection();
 
 	void ProcessTask();
-	uint32_t ProcessMessage();
-	uint32_t ProcessTaskAndMessage();
+	uint32_t ProcessRecvData();
+	uint32_t ProcessTaskAndRecvData();
 
 protected:
 	virtual FSingleThreadIoContext& RequestIoContext();

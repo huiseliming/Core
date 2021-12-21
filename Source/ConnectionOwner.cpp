@@ -25,7 +25,7 @@ FConnectionOwner::~FConnectionOwner()
 		Connection.second->Disconnect();
 	}
 	while (ConnectionNumber != 0){
-		ProcessTaskAndMessage();
+		ProcessTaskAndRecvData();
 		std::this_thread::yield();
 	}
 	AcceptorIoContext.reset();
@@ -111,7 +111,7 @@ void FConnectionOwner::ProcessTask()
 		Task();
 }
 
-uint32_t FConnectionOwner::ProcessMessage()
+uint32_t FConnectionOwner::ProcessRecvData()
 {
 	FDataOwner DataOwner;
 	uint32_t ProcessMessageCounter = 0;
@@ -122,10 +122,10 @@ uint32_t FConnectionOwner::ProcessMessage()
 	return ProcessMessageCounter;
 }
 
-uint32_t FConnectionOwner::ProcessTaskAndMessage()
+uint32_t FConnectionOwner::ProcessTaskAndRecvData()
 {
 	ProcessTask();
-	return ProcessMessage();
+	return ProcessRecvData();
 }
 
 FSingleThreadIoContext& FConnectionOwner::RequestIoContext()

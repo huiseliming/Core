@@ -51,7 +51,7 @@ int main(int argc, const char* argv[])
             TestServer.Listen("", TEST_PORT);
             while (!StopEchoServer)
             {
-                TestServer.ProcessTaskAndMessage();
+                TestServer.ProcessTaskAndRecvData();
                 std::this_thread::yield();
             }
             });
@@ -71,7 +71,7 @@ int main(int argc, const char* argv[])
                         });
                     while (WaitConnectionConnectedCount != 0)
                     {
-                        Client.ProcessTaskAndMessage();
+                        Client.ProcessTaskAndRecvData();
                         std::this_thread::yield();
                     }
                     uint32_t WaitEventCounter = TestSendCounter;
@@ -80,7 +80,7 @@ int main(int argc, const char* argv[])
                         ClientConnection->Send({ 0x06, 0x00, 0x00, 0x00, 'H','e','l' ,'l' ,'o', '\0' });
                     }
                     while (WaitEventCounter > 0) {
-                        WaitEventCounter -= Client.ProcessTaskAndMessage();
+                        WaitEventCounter -= Client.ProcessTaskAndRecvData();
                         std::this_thread::yield();
                     }
                     ClientConnection.reset();
