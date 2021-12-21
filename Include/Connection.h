@@ -10,13 +10,13 @@
 #include "Queue.h"
 
 class FConnectionOwner;
+struct FSingleThreadIoContext;
 
 enum class ESocketState : uint32_t {
-	kInit,
-	kConnecting,
-	kConnected,
-	kDisconnected,
-	kConnectFailed,
+	ESS_None,
+	ESS_Connected,
+	ESS_RequestDisconnect,
+	ESS_Disconnected,
 };
 
 // disable warning 4251
@@ -26,17 +26,14 @@ enum class ESocketState : uint32_t {
 class CORE_API SConnection : public std::enable_shared_from_this<SConnection>
 {
 	friend class FConnectionOwner;
-	friend class FClient;
-	friend class FServer;
 public:
-	SConnection(asio::ip::tcp::socket Socket, FConnectionOwner& Owner, INetworkProtocol* NetworkProtocol = INetworkProtocol::DefaultProtocol);
+	SConnection(asio::ip::tcp::socket InSocket, FConnectionOwner& InOwner, FSingleThreadIoContext& InSingleThreadIoContext);
 	SConnection(const SConnection&) = delete;
 	SConnection(SConnection&&) = delete;
 	SConnection& operator=(const SConnection&) = delete;
 	SConnection& operator=(SConnection&&) = delete;
 	virtual ~SConnection();
 
-	INetworkProtocol* GetNetworkProtocol();
 	const char* GetNetworkName();
 	ESocketState GetSocketState();
 
@@ -45,29 +42,29 @@ public:
 	void Send(std::vector<uint8_t>&& MessageData);
 
 protected:
+	virtual void OnRecvData(std::shared_ptr<SConnection> ConnectionPtr, std::vector<uint8_t>& Data);
+
+protected:
 	virtual void OnErrorCode(const std::error_code& ErrorCode);
 	virtual void ReadHeader();
 	virtual void ReadBody();
 	virtual void WriteHeader();
 	virtual void WriteBody();
 
-
 private:
-	void ConnectToServer();
-	void ConnectToClient();
 	void ConnectToRemote();
-	void ConnectFailed();
-	bool SetConnectingSocketState();
-	void* GetSocket();
 
 protected:
-	FConnectionOwner& Owner;
-	asio::io_context& IoContext;
-	asio::io_context::strand IoContextWriteStrand;
-	asio::ip::tcp::socket Socket;
-	std::string NetworkName;
 
-	INetworkProtocol* NetworkProtocol;
+	// Construction Sequence
+	// 1.Socket
+	// 2.Owner
+	// 3.SingleThreadIoContext
+	asio::ip::tcp::socket Socket;
+	FConnectionOwner& Owner;
+	FSingleThreadIoContext& SingleThreadIoContext;
+
+	std::string NetworkName;
 
 	std::deque<std::vector<uint8_t>> SendTo;
 	// free lock queue for recv
@@ -75,7 +72,7 @@ protected:
 	// buffer for read
 	std::vector<uint8_t> DataTemporaryRead;
 	// connection state
-	std::atomic<ESocketState> State{ ESocketState::kInit };
+	ESocketState SocketState{ ESocketState::ESS_None };
 };
 
 #pragma warning(pop)

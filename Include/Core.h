@@ -7,10 +7,6 @@
 #define WIN32_LEAN_AND_MEAN 
 #include <Windows.h>
 
-
-
-
-
 CORE_API void CoreInitialize();
 
 CORE_API void CoreUninitialize();
@@ -21,7 +17,6 @@ std::string TranslateHResult(HRESULT Hr);
 CORE_API std::string FormatSystemTime(const time_t& tt);
 
 CORE_API std::string GetCurrentSystemTime();
-
 
 
 

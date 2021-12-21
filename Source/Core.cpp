@@ -1,4 +1,4 @@
-#include "Core.h"
+﻿#include "Core.h"
 #include "Global.h"
 #include "Reflect.h"
 #include <ctime>
