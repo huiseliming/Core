@@ -41,6 +41,8 @@ public:
 	void Send(const std::vector<uint8_t>& MessageData);
 	void Send(std::vector<uint8_t>&& MessageData);
 
+	static std::string MakeNetworkName(const asio::ip::tcp::socket& Socket);
+
 protected:
 	virtual void OnRecvData(std::shared_ptr<SConnection> ConnectionPtr, std::vector<uint8_t>& Data);
 
@@ -63,7 +65,7 @@ protected:
 	asio::ip::tcp::socket Socket;
 	FConnectionOwner& Owner;
 	FSingleThreadIoContext& SingleThreadIoContext;
-
+	// 	fmt::format("{:s}:{:d}", Socket.remote_endpoint().address().to_string(), Socket.remote_endpoint().port());
 	std::string NetworkName;
 
 	std::deque<std::vector<uint8_t>> SendTo;

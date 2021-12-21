@@ -4,8 +4,7 @@
 #include <cassert>
 
 #define TEST_PORT 1081
-int32_t TestClientCounter = 1;
-int32_t TestSendCounter = 1;
+int32_t TestSendCounter = 10;
 
 class FTestEchoServer : public FConnectionOwner
 {
@@ -53,43 +52,38 @@ int main(int argc, const char* argv[])
             while (!StopEchoServer)
             {
                 TestServer.ProcessTaskAndMessage();
+                std::this_thread::yield();
             }
             });
         std::thread T2(
             [&] {
                 {
                     FConnectionOwner Client(1);
-                    std::vector<std::shared_ptr<SConnection>> ClientConnections;
+                    std::shared_ptr<SConnection> ClientConnection;
                     std::atomic<int32_t> WaitConnectionConnectedCount = 0;
-                    for (int32_t i = 0; i < TestClientCounter; i++)
-                    {
-                        WaitConnectionConnectedCount++;
-                        Client.ConnectToServer(
-                            "127.0.0.1",
-                            TEST_PORT,
-                            [&](std::shared_ptr<SConnection> Connection) {
-                                ClientConnections.push_back(Connection);
-                                WaitConnectionConnectedCount--;
-                            });
-                    }
+                    WaitConnectionConnectedCount++;
+                    Client.ConnectToServer(
+                        "127.0.0.1",
+                        TEST_PORT,
+                        [&](std::shared_ptr<SConnection> Connection) {
+                            ClientConnection = Connection;
+                            WaitConnectionConnectedCount--;
+                        });
                     while (WaitConnectionConnectedCount != 0)
                     {
                         Client.ProcessTaskAndMessage();
                         std::this_thread::yield();
                     }
-
-                    uint32_t WaitEventCounter = TestSendCounter * TestClientCounter;
+                    uint32_t WaitEventCounter = TestSendCounter;
                     while (--TestSendCounter >= 0)
                     {
-                        for (size_t i = 0; i < ClientConnections.size(); i++)
-                        {
-                            ClientConnections[i]->Send({ 0x06, 0x00, 0x00, 0x00, 'H','e','l' ,'l' ,'o', '\0' });
-                        }
+                        ClientConnection->Send({ 0x06, 0x00, 0x00, 0x00, 'H','e','l' ,'l' ,'o', '\0' });
                     }
                     while (WaitEventCounter > 0) {
                         WaitEventCounter -= Client.ProcessTaskAndMessage();
+                        std::this_thread::yield();
                     }
-                    ClientConnections.clear();
+                    ClientConnection.reset();
                 }
                 StopEchoServer = true;
             });

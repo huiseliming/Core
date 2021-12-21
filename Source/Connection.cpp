@@ -76,6 +76,11 @@ void SConnection::Send(std::vector<uint8_t>&& Data)
 		});
 }
 
+std::string SConnection::MakeNetworkName(const asio::ip::tcp::socket& Socket)
+{
+	return fmt::format("{:s}:{:d}", Socket.remote_endpoint().address().to_string(), Socket.remote_endpoint().port());
+}
+
 void SConnection::OnRecvData(std::shared_ptr<SConnection> ConnectionPtr, std::vector<uint8_t>& Data) 
 {
 	uint8_t* BodyPtr = Data.data() + sizeof(uint32_t);
@@ -221,7 +226,7 @@ void SConnection::WriteBody()
 
 void SConnection::ConnectToRemote()
 {
-	NetworkName = fmt::format("{:s}:{:d}", Socket.remote_endpoint().address().to_string(), Socket.remote_endpoint().port());
+	NetworkName = MakeNetworkName(Socket);
 	SocketState = ESocketState::ESS_Connected;
 	Owner.PushTask([Self = shared_from_this()]{ Self->Owner.OnConnected(Self); });
 	ReadHeader();

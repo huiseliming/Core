@@ -56,8 +56,22 @@ bool FConnectionOwner::ConnectToServer(std::string IP, uint32_t Port, std::funct
 		std::shared_ptr<asio::ip::tcp::socket> Socket(new asio::ip::tcp::socket(IoContext.IoContext));
 		asio::async_connect(*Socket, Endpoints, [this, &IoContext = IoContext, Socket, ResultCallback = std::move(ResultCallback)](std::error_code ErrorCode, asio::ip::tcp::endpoint endpoint) mutable {
 			std::shared_ptr<SConnection> Connection;
-			if (!ErrorCode) Connection = CreateConnection(*Socket, IoContext);
-			if (Connection) Connection->ConnectToRemote();
+			if (!ErrorCode) 
+			{
+				std::string NetworkName = SConnection::MakeNetworkName(*Socket);
+				if (ConnectionMap.contains(NetworkName))
+				{
+					GLog(ELL_Warning, "Connection<{}> Existed\n", NetworkName);
+				}
+				else
+				{
+					Connection = CreateConnection(*Socket, IoContext);
+				}
+			}
+			if (Connection)
+			{
+				Connection->ConnectToRemote();
+			}
 			PushTask([Connection, ResultCallback = std::move(ResultCallback)]{ ResultCallback(Connection); });
 		});
 		return true;
