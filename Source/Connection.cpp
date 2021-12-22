@@ -104,7 +104,7 @@ void SConnection::OnErrorCode(const std::error_code& ErrorCode)
 	}
 	else
 	{
-		GLog(ELL_Warning, "<{:s}> Socket Error : {:s}\n", NetworkName, ErrorCode.message());
+		GLog(ELL_Warning, "<{:s}> Socket Error : {:s}\n", NetworkName, DefaultCodePageToUTF8(ErrorCode.message()));
 	}
 	if (SocketState == ESocketState::ESS_Connected)
 	{

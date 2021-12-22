@@ -19,7 +19,7 @@ CORE_API std::string FormatSystemTime(const time_t& tt);
 
 CORE_API std::string GetCurrentSystemTime();
 
-
+std::string DefaultCodePageToUTF8(const std::string& DefaultCodePage);
 
 
 

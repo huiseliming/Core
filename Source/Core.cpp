@@ -53,3 +53,22 @@ std::string GetCurrentSystemTime()
 	return FormatSystemTime(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
 }
 
+std::string DefaultCodePageToUTF8(const std::string& DefaultCodePage)
+{
+#ifdef _WIN32
+	int Len = MultiByteToWideChar(CP_ACP, 0, DefaultCodePage.c_str(), -1, nullptr, 0);
+	wchar_t* WString = new wchar_t[Len + 1];
+	memset(WString, 0, Len + 1);
+	MultiByteToWideChar(CP_ACP, 0, DefaultCodePage.c_str(), -1, WString, Len);
+
+	Len = WideCharToMultiByte(CP_UTF8, 0, WString, -1, nullptr, 0, nullptr, nullptr);
+	std::string Ret;
+	Ret.resize(Len + 1);
+	WideCharToMultiByte(CP_UTF8, 0, WString, -1, (LPSTR)Ret.c_str(), Len, nullptr, nullptr);
+	delete[] WString;
+	return Ret;
+#else
+	return DefaultCodePage;
+#endif // DEBUG
+}
+
