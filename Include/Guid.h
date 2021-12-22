@@ -1,60 +1,51 @@
 #pragma once
 #include <cassert>
 #include <memory>
+#include <string>
+#include "CoreExport.h"
 
-struct FGuid
+#ifdef _WIN32
+#include <combaseapi.h>
+#else
+#include <uuid/uuid.h>
+#endif
+
+struct CORE_EXPORT FGuid
 {
 	FGuid();
 	FGuid(const FGuid& Other) {
-		Data1 = Other.Data1;
-		Data2 = Other.Data2;
-		Data3 = Other.Data3;
-		Data4 = Other.Data4;
+		Data = Other.Data;
 	}
 	FGuid(FGuid&& Other) {
-		Data1 = Other.Data1;
-		Data2 = Other.Data2;
-		Data3 = Other.Data3;
-		Data4 = Other.Data4;
-		Other.Data1 = 0;
-		Other.Data2 = 0;
-		Other.Data3 = 0;
-		Other.Data4 = 0;
+		Data = Other.Data;
+		Other.Data = {};
 	}
 	FGuid& operator=(const FGuid& Other) {
-		assert(std::addressof(Other) != this);
-		Data1 = Other.Data1;
-		Data2 = Other.Data2;
-		Data3 = Other.Data3;
-		Data4 = Other.Data4;
+		Data = Other.Data;
 		return *this;
 	}
 	FGuid operator=(FGuid&& Other) {
 		assert(std::addressof(Other) != this);
-		Data1 = Other.Data1;
-		Data2 = Other.Data2;
-		Data3 = Other.Data3;
-		Data4 = Other.Data4;
-		Other.Data1 = 0;
-		Other.Data2 = 0;
-		Other.Data3 = 0;
-		Other.Data4 = 0;
+		Data = Other.Data;
+		Other.Data = {};
 		return *this;
 	}
 	bool operator==(const FGuid& Other)
 	{
-		return
-			Other.Data1 == this->Data1 &&
-			Other.Data2 == this->Data2 &&
-			Other.Data3 == this->Data3 &&
-			Other.Data4 == this->Data4;
+		return Other.Data == Data;
 	}
 	bool operator!=(const FGuid& Other)
 	{
-		return *this == Other;
+		return !(*this == Other);
 	}
-	uint32_t Data1{ 0 };
-	uint16_t Data2{ 0 };
-	uint16_t Data3{ 0 };
-	uint64_t Data4{ 0 };
+
+	static FGuid GenerateGuid();
+
+	std::string ToString();
+
+#ifdef _WIN32
+	GUID Data;
+#else
+
+#endif // DEBUG
 };

@@ -44,9 +44,10 @@ std::string FormatSystemTime(const time_t& tt)
 	tm* NowTmPtr = localtime(&tt);
 #endif // DEBUG
 	return fmt::format("{:d}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}",
-		NowTmPtr->tm_year + 1900, NowTmPtr->tm_mon, NowTmPtr->tm_mday,
+		NowTmPtr->tm_year + 1900, NowTmPtr->tm_mon + 1, NowTmPtr->tm_mday,
 		NowTmPtr->tm_hour, NowTmPtr->tm_min, NowTmPtr->tm_sec);
 }
+
 std::string GetCurrentSystemTime()
 {
 	return FormatSystemTime(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));

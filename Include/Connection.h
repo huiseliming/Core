@@ -12,6 +12,29 @@
 class FConnectionOwner;
 struct FSingleThreadIoContext;
 
+//namespace asio
+//{
+//	class any_io_executor;
+//
+//	template <typename Protocol, typename Executor = any_io_executor>
+//	class basic_stream_socket;
+//
+//	template <typename Protocol, typename Executor = any_io_executor>
+//	class basic_socket_acceptor;
+//
+//	class io_context;
+//
+//	namespace ip 
+//	{
+//		class tcp
+//		{
+//			typedef basic_stream_socket<tcp> socket;
+//
+//			typedef basic_socket_acceptor<tcp> acceptor;
+//		};
+//	}
+//}
+
 enum class ESocketState : uint32_t {
 	ESS_None,
 	ESS_Connected,
@@ -44,7 +67,10 @@ public:
 	static std::string MakeNetworkName(const asio::ip::tcp::socket& Socket);
 
 protected:
-	virtual void OnRecvData(std::shared_ptr<SConnection> ConnectionPtr, std::vector<uint8_t>& Data);
+	// Call In OwenerThread 
+	virtual void OnRecvData(std::vector<uint8_t>& Data);
+	virtual void OnConnected() {};
+	virtual void OnDisconnected() {};
 
 protected:
 	virtual void OnErrorCode(const std::error_code& ErrorCode);

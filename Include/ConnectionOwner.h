@@ -1,8 +1,8 @@
 #pragma once
 #include <functional>
 #include <future>
-#include "Queue.h"
 #include "Connection.h"
+#include "Queue.h"
 
 // disable warning 4251
 #pragma warning(push)

@@ -24,8 +24,20 @@ FConnectionOwner::~FConnectionOwner()
 	{
 		Connection.second->Disconnect();
 	}
+	std::chrono::steady_clock::time_point TP1 = std::chrono::steady_clock::now();
 	while (ConnectionNumber != 0){
 		ProcessTaskAndRecvData();
+#ifndef NDEBUG
+		std::chrono::steady_clock::time_point TP2 = std::chrono::steady_clock::now();
+		if (std::chrono::duration<double>(TP2-TP1).count() > 0.1f)
+		{
+			TP1 = TP2;
+			for (auto Connection : ConnectionMap)
+			{
+				GLog(ELL_Warning, "Connection<{}> use count is {:d}", Connection.first, Connection.second.use_count());
+			}
+		}
+#endif // NDEBUG
 		std::this_thread::yield();
 	}
 	AcceptorIoContext.reset();
@@ -72,7 +84,10 @@ bool FConnectionOwner::ConnectToServer(std::string IP, uint32_t Port, std::funct
 			{
 				Connection->ConnectToRemote();
 			}
-			PushTask([Connection, ResultCallback = std::move(ResultCallback)]{ ResultCallback(Connection); });
+			PushTask(
+				[Connection, ResultCallback = std::move(ResultCallback)]{ 
+					ResultCallback(Connection); 
+				});
 		});
 		return true;
 	}
@@ -161,7 +176,7 @@ std::shared_ptr<SConnection> FConnectionOwner::CreateConnection(asio::ip::tcp::s
 
 void FConnectionOwner::OnRecvData(std::shared_ptr<SConnection> ConnectionPtr, std::vector<uint8_t>& Data)
 {
-	ConnectionPtr->OnRecvData(ConnectionPtr, Data);
+	ConnectionPtr->OnRecvData(Data);
 }
 
 void FConnectionOwner::OnConnected(std::shared_ptr<SConnection> ConnectionPtr)
@@ -179,12 +194,14 @@ void FConnectionOwner::OnConnected(std::shared_ptr<SConnection> ConnectionPtr)
 	{
 		ConnectionMap.insert(std::make_pair<>(ConnectionPtr->GetNetworkName(), ConnectionPtr));
 	}
+	ConnectionPtr->OnConnected();
 	GLog(ELL_Info, "Connection<{}> Connected", ConnectionPtr->GetNetworkName());
 	GLog(ELL_Debug, "Current Connected Connection Count {:d}", ++ConnectedConnectionNumber);
 }
 
 void FConnectionOwner::OnDisconnected(std::shared_ptr<SConnection> ConnectionPtr)
 {
+	ConnectionPtr->OnDisconnected();
 	bool bRemoveInWaitCleanConnections = false;
 	for (auto it = WaitCleanConnections.begin(); it != WaitCleanConnections.end(); it++)
 	{

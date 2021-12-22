@@ -48,6 +48,8 @@ void SConnection::Disconnect()
 				std::error_code ErrorCode;
 				Socket.shutdown(asio::ip::tcp::socket::shutdown_both, ErrorCode);
 				if (ErrorCode) OnErrorCode(ErrorCode);
+				if (Socket.is_open()) Socket.close(ErrorCode);
+				if (ErrorCode) OnErrorCode(ErrorCode);
 			}
 		});
 }
@@ -81,7 +83,7 @@ std::string SConnection::MakeNetworkName(const asio::ip::tcp::socket& Socket)
 	return fmt::format("{:s}:{:d}", Socket.remote_endpoint().address().to_string(), Socket.remote_endpoint().port());
 }
 
-void SConnection::OnRecvData(std::shared_ptr<SConnection> ConnectionPtr, std::vector<uint8_t>& Data) 
+void SConnection::OnRecvData(std::vector<uint8_t>& Data) 
 {
 	uint8_t* BodyPtr = Data.data() + sizeof(uint32_t);
 	uint32_t BodySize = *(uint32_t*)Data.data();
@@ -91,7 +93,7 @@ void SConnection::OnRecvData(std::shared_ptr<SConnection> ConnectionPtr, std::ve
 	{
 		FormatString.append(fmt::format("{:02x}", *(BodyPtr + i)));
 	}
-	GLog(ELL_Debug, "<{:s}> Recv [{}]", ConnectionPtr->GetNetworkName(), FormatString);
+	GLog(ELL_Debug, "<{:s}> Recv [{}]", GetNetworkName(), FormatString);
 }
 
 void SConnection::OnErrorCode(const std::error_code& ErrorCode)
