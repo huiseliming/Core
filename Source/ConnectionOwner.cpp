@@ -181,6 +181,7 @@ void FConnectionOwner::OnRecvData(std::shared_ptr<SConnection> ConnectionPtr, st
 
 void FConnectionOwner::OnConnected(std::shared_ptr<SConnection> ConnectionPtr)
 {
+	ConnectionPtr->OnConnected();
 	auto ExistConnection = ConnectionMap.find(ConnectionPtr->GetNetworkName());
 	if (ExistConnection != std::end(ConnectionMap))
 	{
@@ -194,14 +195,12 @@ void FConnectionOwner::OnConnected(std::shared_ptr<SConnection> ConnectionPtr)
 	{
 		ConnectionMap.insert(std::make_pair<>(ConnectionPtr->GetNetworkName(), ConnectionPtr));
 	}
-	ConnectionPtr->OnConnected();
 	GLog(ELL_Info, "Connection<{}> Connected", ConnectionPtr->GetNetworkName());
 	GLog(ELL_Debug, "Current Connected Connection Count {:d}", ++ConnectedConnectionNumber);
 }
 
 void FConnectionOwner::OnDisconnected(std::shared_ptr<SConnection> ConnectionPtr)
 {
-	ConnectionPtr->OnDisconnected();
 	bool bRemoveInWaitCleanConnections = false;
 	for (auto it = WaitCleanConnections.begin(); it != WaitCleanConnections.end(); it++)
 	{
@@ -214,6 +213,7 @@ void FConnectionOwner::OnDisconnected(std::shared_ptr<SConnection> ConnectionPtr
 	}
 	if (!bRemoveInWaitCleanConnections)
 		assert(ConnectionMap.erase(ConnectionPtr->GetNetworkName()) == 1);
+	ConnectionPtr->OnDisconnected();
 	GLog(ELL_Info, "Connection<{}> Disconnected", ConnectionPtr->GetNetworkName());
 	GLog(ELL_Debug, "Current Connected Connection Count {:d} ", --ConnectedConnectionNumber);
 }
