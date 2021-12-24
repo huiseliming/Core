@@ -78,6 +78,40 @@ void SConnection::Send(std::vector<uint8_t>&& Data)
 		});
 }
 
+bool SConnection::ChannelFilter(std::vector<uint8_t>& Data)
+{
+	std::string KsyyXMLString;
+	for (auto it = ChannelList.begin(); it != ChannelList.end(); it++)
+	{
+		std::shared_ptr<FChannel> Channel = (*it);
+		if (Channel->IsMatchedData(shared_from_this(), Data))
+		{
+			Channel->OnRecvData(shared_from_this(), Data);
+			if (Channel->ChannelState == EChannelState::ECS_RequestFinished)
+			{
+				Channel->Finished();
+				Channel->ChannelState = EChannelState::ECS_Finished;
+				it = ChannelList.erase(it);
+			}
+			else if (Channel->ChannelState == EChannelState::ECS_RequestTerminated)
+			{
+				Channel->Terminated();
+				Channel->ChannelState = EChannelState::ECS_Terminated;
+				it = ChannelList.erase(it);
+			}
+			return true;
+		}
+	}
+	return false;
+}
+
+void SConnection::AddChannel(std::shared_ptr<FChannel> Channel)
+{
+	ChannelList.push_back(Channel);
+	Channel->ChannelState = EChannelState::ECS_ReadWrite;
+	Channel->OnSendData(shared_from_this());
+}
+
 std::string SConnection::MakeNetworkName(const asio::ip::tcp::socket& Socket)
 {
 	return fmt::format("{:s}:{:d}", Socket.remote_endpoint().address().to_string(), Socket.remote_endpoint().port());
@@ -85,15 +119,33 @@ std::string SConnection::MakeNetworkName(const asio::ip::tcp::socket& Socket)
 
 void SConnection::OnRecvData(std::vector<uint8_t>& Data) 
 {
-	uint8_t* BodyPtr = Data.data() + sizeof(uint32_t);
-	uint32_t BodySize = *(uint32_t*)Data.data();
-	std::string FormatString;
-	FormatString.reserve(BodySize * 2 );
-	for (size_t i = 0; i < BodySize; i++)
+	if (!ChannelFilter(Data))
 	{
-		FormatString.append(fmt::format("{:02x}", *(BodyPtr + i)));
+		std::string FormatString;
+		FormatString.reserve(Data.size() * 2);
+		for (size_t i = 0; i < Data.size(); i++)
+		{
+			FormatString.append(fmt::format("{:02x}", Data[i]));
+		}
+		GLog(ELL_Debug, "<{:s}> Recv [{}]", GetNetworkName(), FormatString);
 	}
-	GLog(ELL_Debug, "<{:s}> Recv [{}]", GetNetworkName(), FormatString);
+}
+
+void SConnection::OnConnected()
+{
+
+}
+
+void SConnection::OnDisconnected()
+{
+	auto it = ChannelList.begin();
+	while (it != ChannelList.end())
+	{
+		std::shared_ptr<FChannel> Channel = (*it);
+		Channel->Terminated();
+		Channel->ChannelState = EChannelState::ECS_Terminated;
+		it = ChannelList.erase(it);
+	}
 }
 
 void SConnection::OnErrorCode(const std::error_code& ErrorCode)

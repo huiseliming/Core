@@ -42,9 +42,35 @@ enum class ESocketState : uint32_t {
 	ESS_Disconnected,
 };
 
+enum class EChannelState : uint8_t
+{
+	ECS_None,
+	ECS_Init,
+	ECS_ReadWrite,
+	ECS_RequestFinished,
+	ECS_Finished,
+	ECS_RequestTerminated,
+	ECS_Terminated,
+};
+
 // disable warning 4251
 #pragma warning(push)
 #pragma warning (disable: 4251)
+
+struct CORE_API FChannel : std::enable_shared_from_this<FChannel>
+{
+	virtual ~FChannel() = default;
+	virtual void Terminated() { if (OnTerminated) OnTerminated(); }
+	virtual void Finished() { if (OnFinished) OnFinished(); }
+	virtual bool IsMatchedData(std::shared_ptr<SConnection> Connection, const std::vector<uint8_t>& Data) = 0;
+	virtual void OnSendData(std::shared_ptr<SConnection> Connection) = 0;
+	virtual void OnRecvData(std::shared_ptr<SConnection> Connection, const std::vector<uint8_t>& Data) = 0;
+
+	std::function<void()> OnTerminated;
+	std::function<void()> OnFinished;
+
+	EChannelState ChannelState{ EChannelState::ECS_Init };
+};
 
 class CORE_API SConnection : public std::enable_shared_from_this<SConnection>
 {
@@ -63,14 +89,20 @@ public:
 	void Disconnect();
 	void Send(const std::vector<uint8_t>& MessageData);
 	void Send(std::vector<uint8_t>&& MessageData);
+	void AddChannel(std::shared_ptr<FChannel> Channel);
+
+protected:
+	bool ChannelFilter(std::vector<uint8_t>& Data);
 
 	static std::string MakeNetworkName(const asio::ip::tcp::socket& Socket);
+
+	std::list<std::shared_ptr<FChannel>> ChannelList;
 
 protected:
 	// Call In OwenerThread 
 	virtual void OnRecvData(std::vector<uint8_t>& Data);
-	virtual void OnConnected() {};
-	virtual void OnDisconnected() {};
+	virtual void OnConnected();
+	virtual void OnDisconnected();
 
 protected:
 	virtual void OnErrorCode(const std::error_code& ErrorCode);

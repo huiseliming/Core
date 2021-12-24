@@ -12,7 +12,13 @@
 
 struct CORE_EXPORT FGuid
 {
+protected:
 	FGuid();
+public:
+	FGuid(uint8_t InBytes[16])
+	{
+		memcpy(&Data, &InBytes[0], 16);
+	}
 	FGuid(const FGuid& Other) {
 		Data = Other.Data;
 	}
@@ -32,7 +38,13 @@ struct CORE_EXPORT FGuid
 	}
 	bool operator==(const FGuid& Other)
 	{
-		return Other.Data == Data;
+		if (Other.Data.Data1 != Data.Data2) return false;
+		if (Other.Data.Data2 != Data.Data2) return false;
+		if (Other.Data.Data3 != Data.Data3) return false;
+		for (size_t i = 0; i < 8; i++)
+			if (Other.Data.Data4[i] == Data.Data4[i]) 
+				return false;
+		return true;
 	}
 	bool operator!=(const FGuid& Other)
 	{
