@@ -41,7 +41,7 @@ uint32_t FMetaTable::RegisterMetaToTable(FMeta* Meta)
 {
     assert(Meta != nullptr);
     assert(std::end(NameToId) == NameToId.find(Meta->Name));
-    if (Meta->Id == 0) {
+    if (Meta->Id == UINT32_MAX) {
         Meta->Id = IdCounter++;
         Metas.push_back(Meta);
     	NameToId.insert(std::make_pair(Meta->Name, Meta->Id));
