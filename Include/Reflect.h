@@ -285,6 +285,7 @@ struct CORE_API FEnum : public FMeta
 	{}
 #endif
 	UInt32 Size;
+	std::unordered_map<uint64_t, STRING_TYPE> IdToDisplayName;
 #ifdef COMPILE_REFLECTOR
 	std::vector<std::pair<STRING_TYPE, uint64_t>> Options;
 #else
