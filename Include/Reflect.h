@@ -23,13 +23,14 @@
 #define STRUCT(...)    __attribute__((annotate("Meta" __VA_OPT__(",") #__VA_ARGS__)))
 #define ENUM(...)      __attribute__((annotate("Meta" __VA_OPT__(",") #__VA_ARGS__)))
 #define PROPERTY(...)  __attribute__((annotate("Meta" __VA_OPT__(",") #__VA_ARGS__)))
-#define FUNCTION(...)  __attribute__((annotate("Meta" __VA_OPT__(",") #__VA_ARGS__)))
+#define METADATA(...)  __attribute__((annotate("Meta" __VA_OPT__(",") #__VA_ARGS__)))
 #else
 #define CLASS(...)
 #define STRUCT(...)
 #define ENUM(...)
 #define PROPERTY(...)
 #define FUNCTION(...)
+#define METADATA(...)
 #endif
 
 #define GENERATED_META_BODY()                        \
